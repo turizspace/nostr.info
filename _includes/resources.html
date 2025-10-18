@@ -1,4 +1,9 @@
-<h2>Projects</h2>
+<div class="resources-header">
+  <h2>Projects</h2>
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search projects..." class="search-input">
+  </div>
+</div>
 
 <div id="toggles" class="tags"></div>
 
@@ -7,16 +12,16 @@
     {%- if p.tags -%}
       {%- assign url = p.git | default: p.web -%}
       <div class="result {{ p.tags | join: " " }} {{ p.platforms | join: " " }} {{ p.nips | join: " " }}">
-        <div class="name"><a href="{{ url }}">{{ p.title }}</a></div>
+        <div class="name"><a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ p.title }}</a></div>
         <div class="details"></div>
         <div class="instances">{% if p.instances %}Instances:<ul>{%- for i in p.instances -%}
-          <li><a href="{{ i.url | default: i }}">{{ i.name | default: i }}</a>{%- if i.comment -%}: {{ i.comment }}{%- endif -%}</li>
+          <li><a href="{{ i.url | default: i }}" target="_blank" rel="noopener noreferrer">{{ i.name | default: i }}</a>{%- if i.comment -%}: {{ i.comment }}{%- endif -%}</li>
           {%- endfor -%}</ul>{%- endif -%}</div>
         <div class="dev">
           {% if p.license %}License: {{ p.license }}<br>{%- endif -%}
           {% if p.progLang %}Implemented with {{ p.progLang | join: ", " }}{%- endif -%}
-          {% if p.authorNPub %} by <a href="https://snort.social/p/{{ p.authorNPub }}">
-            <img class="avatar" src="/images/nostrich.webp"></a>
+          {% if p.authorNPub %} by <a href="https://snort.social/p/{{ p.authorNPub }}" target="_blank" rel="noopener noreferrer">
+            <img class="avatar" src="/images/nostrich.webp" alt="Author avatar"></a>
           {%- endif -%}
         </div>
         <div class="tags">
@@ -32,4 +37,3 @@
 </div>
 
 <script src="/js/resources.js"></script>
-<link rel="stylesheet" href="{{ base_path }}/assets/css/resources.css" />

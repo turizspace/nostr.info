@@ -95,8 +95,13 @@ function connectRelays() {
 
 function relaysTable() {
   connectRelaysBtn.hidden = relays.filter(it=>it.tried<0).length === 0
-  return '<table>' +
-    '<tr><td>Relay</td><td>Events<sup>1</sup></td><td>Connection<sup>2</sup></td><td>Comment</td></tr>' +
+  return '<table class="relay-table">' +
+    '<thead><tr>' +
+    '<th>Relay URL</th>' +
+    '<th>Events<sup>1</sup></th>' +
+    '<th>Status<sup>2</sup></th>' +
+    '<th>Information</th>' +
+    '</tr></thead><tbody>' +
     relays.filter(r=>{
       switch (relayQualityFilter.value) {
         case 'all': return true
@@ -106,24 +111,38 @@ function relaysTable() {
         case 'sentConnected': return r.events >= LIMIT && r.connected
         default: return false
       }
-    }).map(r=>`<tr><td>${r.url}</td><td>${r.events}</td><td>${
-      r.tried < 0
-        ? '?'
+    }).map(r=>{
+      const status = r.tried < 0
+        ? '<span class="status pending">Pending</span>'
         : r.connected
-          ? 'true'
+          ? '<span class="status connected">Connected</span>'
           : r.answered
-            ? 'lost'
-            : 'false'
-        }</td><td>${ (r.wrongKind > 0
-          ? r.wrongKind + ' unrequested'
-          : '') + (r.invalid > 0
-            ? '<br>' + r.invalid + ' invalid'
-            : '') + (r.msg.length > 0
-              ? ` (${r.msg})`
-              : '')}</td></tr>`).join('') +
-        `<tr><td colspan="5"><sup>1</sup> counting all events received after requesting ${LIMIT} most recent events.<br>Events received to determine names and follows are not counted.</td></tr>` +
-        '<tr><td colspan="5"><sup>2</sup> "false" = connection never succeeded. "?" = we haven\'t tried yet. Press button above to try.</td></tr>' +
-    '</table>'
+            ? '<span class="status disconnected">Disconnected</span>'
+            : '<span class="status disconnected">Failed</span>';
+      
+      const info = [];
+      if (r.wrongKind > 0) info.push(`${r.wrongKind} unrequested events`);
+      if (r.invalid > 0) info.push(`${r.invalid} invalid events`);
+      if (r.msg.length > 0) info.push(r.msg);
+      
+      return `<tr>
+        <td><code>${r.url}</code></td>
+        <td>${r.events > 0 ? `<strong>${r.events}</strong>` : '0'}</td>
+        <td>${status}</td>
+        <td>${info.join('<br>')}</td>
+      </tr>`;
+    }).join('') +
+        `</tbody><tfoot>
+          <tr><td colspan="4">
+            <sup>1</sup> Events count shows the number of events received after requesting ${LIMIT} most recent events. 
+            Events for metadata and follows are not included in this count.
+          </td></tr>
+          <tr><td colspan="4">
+            <sup>2</sup> Status indicates current connection state: 
+            Connected (active), Disconnected (lost connection), 
+            Failed (never connected), or Pending (not yet attempted).
+          </td></tr>
+        </tfoot></table>`
 }
 
 function eventsTable() {

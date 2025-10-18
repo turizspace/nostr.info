@@ -21,8 +21,9 @@
 title: nostr.info
 email: leo@walletscrutiny.com
 description: >-
-  What is going on in the world of nostr. Stats, Charts, Live Monitors,
-  Resources, ...
+  Nostr.info — curated news, realtime relay monitors, and developer resources
+  for the Nostr protocol. Browse live stats, charts, tools, tutorials, and a
+  searchable catalog of projects and relays to help you explore and contribute.
 baseurl: ""
 url: https://nostr.info
 twitter_username: LeoWandersleb

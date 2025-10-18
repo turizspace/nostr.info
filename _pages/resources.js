@@ -31,8 +31,49 @@ window.activeTags = ["client"]
 {% assign n = site.nostrResources | map: "nips" %}
 window.allTags = {{ p | concat: t | concat: n | compact | uniq | jsonify }}
 
-window.addEventListener("load", update)
+window.addEventListener("load", () => {
+  update()
+  setupSearch()
+})
+
 const toggles = document.getElementById("toggles")
+
+function setupSearch() {
+  const searchInput = document.getElementById("searchInput")
+  if (searchInput) {
+    searchInput.addEventListener("input", debounce((e) => {
+      const searchTerm = e.target.value.toLowerCase()
+      filterResults(searchTerm)
+    }, 300))
+  }
+}
+
+function debounce(func, wait) {
+  let timeout
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
+
+function filterResults(searchTerm) {
+  const results = document.querySelectorAll('.result')
+  results.forEach(result => {
+    const title = result.querySelector('.name').textContent.toLowerCase()
+    const description = result.querySelector('.dev').textContent.toLowerCase()
+    const isVisible = title.includes(searchTerm) || description.includes(searchTerm)
+    
+    if (window.activeTags.length === 0) {
+      result.style.display = isVisible ? 'block' : 'none'
+    } else {
+      result.style.display = isVisible && result.matches('.' + window.activeTags.join('.')) ? 'block' : 'none'
+    }
+  })
+}
 
 function clickTag(t) {
   if (window.activeTags.includes(t)) {

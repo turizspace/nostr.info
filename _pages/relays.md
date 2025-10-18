@@ -5,58 +5,84 @@ permalink: /relays/
 ---
 
 <link rel="stylesheet" href="/assets/css/main.css">
+<link rel="stylesheet" href="/assets/css/relays.css">
 <script src="/js/relays.js"></script>
 
-<select name="tab" id="tab" onchange="setDirty()">
-  <option value="relays">Show Relays</option>
-  <option value="events">Show Events</option>
-</select>
-<br>
+<div class="relays-container">
+  <div class="page-header">
+    <h1>Nostr Relays</h1>
+  </div>
 
-<div id="relay-filters">
-  <label for="relay-filter">Filter by Relay performance:</label>
-  <select name="relay-filter" id="relay-filter" onchange="setDirty()">
-    <option value="sentConnected">Sent us many without dropping</option>
-    <option value="sentMany">Sent us many events</option>
-    <option value="sent">Sent us events</option>
-    <option value="didConnect" selected>Accepted WebSocket connection</option>
-    <option value="all">All</option>
-  </select>
-  <br><input id="connectNewRelays" type="button" onclick="connectRelays()" value="Connect new relays!">
-</div>
-<div id="event-filters">
-  <label for="kind-filter">Filter by Kind:</label>
-  <select name="kind-filter" id="kind-filter" onchange="setDirty()">
-    <option value="all">kind-*: All kinds</option>
-    <option value="unknown">kind-?: Stuff we don't handle yet</option>
-    <option value="0">kind-0: Metadata</option>
-    <option value="1">kind-1: Public Post</option>
-    <option value="2">kind-2: Relay Recommendation</option>
-    <option value="3">kind-3: Follows List</option>
-    <option value="4">kind-4: DM</option>
-    <option value="5">kind-5: Deletions</option>
-    <option value="6">kind-6: Quoted Boost</option>
-    <option value="7">kind-7: Reactions</option>
-    <option value="30">kind-30: Chess</option>
-    <option value="40">kind-40: Channel created</option>
-    <option value="41">kind-41: Channel metadata update</option>
-    <option value="42">kind-42: Channel message</option>
-    <option value="43">kind-43: Hide message</option>
-    <option value="44">kind-44: Mute user</option>
-    <option value="60">kind-60: Ride Sharing</option>
-  </select>
-  <br>
-  <label for="pubkey-filter">Filter by Pubkey:</label>
-  <input type="text" name="pubkey-filter" id="pubkey-filter" onchange="setDirty()">
-  <label for="degree-filter">... and follows of degree:</label>
-  <select name="degree-filter" id="degree-filter" disabled onchange="setDirty()">
-    <option value="0">Only the pubkey</option>
-    <option value="1">Follows of the pubkey</option>
-    <option value="2">Follows² of the pubkey</option>
-    <option value="3">Follows³ of the pubkey</option>
-    <option value="4">Follows⁴ of the pubkey</option>
-    <option value="5">Follows⁵ of the pubkey</option>
-  </select>
-</div>
+  <div class="controls-container">
+    <select name="tab" id="tab" class="tab-select" onchange="setDirty()">
+      <option value="relays">📡 Show Relays</option>
+      <option value="events">📝 Show Events</option>
+    </select>
+
+    <div id="relay-filters">
+      <div class="filter-group">
+        <label for="relay-filter">Filter by Relay Performance:</label>
+        <select name="relay-filter" id="relay-filter" class="filter-select" onchange="setDirty()">
+          <option value="sentConnected">🌟 High Performance (Many Events, Stable)</option>
+          <option value="sentMany">📈 High Volume (Many Events)</option>
+          <option value="sent">✉️ Active (Sent Events)</option>
+          <option value="didConnect" selected>🔌 Connected (WebSocket Active)</option>
+          <option value="all">📋 All Relays</option>
+        </select>
+      </div>
+      <button id="connectNewRelays" class="connect-button" onclick="connectRelays()">
+        🔄 Connect New Relays
+      </button>
+    </div>
+    <div id="event-filters">
+      <div class="filter-group">
+        <label for="kind-filter">Event Type:</label>
+        <select name="kind-filter" id="kind-filter" class="filter-select" onchange="setDirty()">
+          <option value="all">📋 All Event Types</option>
+          <option value="unknown">❓ Unhandled Types</option>
+          <option value="0">👤 Metadata</option>
+          <option value="1">📝 Public Post</option>
+          <option value="2">📡 Relay Recommendation</option>
+          <option value="3">👥 Follows List</option>
+          <option value="4">✉️ Direct Message</option>
+          <option value="5">🗑️ Deletions</option>
+          <option value="6">🔄 Quoted Boost</option>
+          <option value="7">👍 Reactions</option>
+          <option value="30">♟️ Chess</option>
+          <option value="40">📢 Channel Created</option>
+          <option value="41">📝 Channel Update</option>
+          <option value="42">💬 Channel Message</option>
+          <option value="43">🚫 Hide Message</option>
+          <option value="44">🔇 Mute User</option>
+          <option value="60">🚗 Ride Sharing</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="pubkey-filter">Public Key Filter:</label>
+        <input type="text" 
+               name="pubkey-filter" 
+               id="pubkey-filter" 
+               class="filter-input" 
+               placeholder="Enter public key..." 
+               onchange="setDirty()">
+      </div>
+
+      <div class="filter-group">
+        <label for="degree-filter">Connection Depth:</label>
+        <select name="degree-filter" 
+                id="degree-filter" 
+                class="filter-select" 
+                disabled 
+                onchange="setDirty()">
+          <option value="0">🎯 Direct Match Only</option>
+          <option value="1">👥 Direct Follows</option>
+          <option value="2">🌐 Second Degree</option>
+          <option value="3">🔄 Third Degree</option>
+          <option value="4">📈 Fourth Degree</option>
+          <option value="5">🌍 Fifth Degree</option>
+        </select>
+      </div>
+    </div>
 <br>
 <div id="output"></div>
