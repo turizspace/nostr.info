@@ -6,6 +6,12 @@
   <link rel="stylesheet" href="{{ "/assets/main.css" | relative_url }}">
   <link rel="stylesheet" href="{{ "/assets/css/header.css" | relative_url }}">
   <link rel="stylesheet" href="{{ "/assets/css/footer.css" | relative_url }}">
+  {%- if page.layout == "home" -%}
+    <link rel="stylesheet" href="{{ "/assets/css/home.css" | relative_url }}">
+  {%- endif -%}
+  {%- if page.layout == "post" -%}
+    <link rel="stylesheet" href="{{ "/assets/css/post.css" | relative_url }}">
+  {%- endif -%}
   {%- if page.url == "/resources/" or page.permalink == "/resources/" -%}
     <link rel="stylesheet" href="{{ "/assets/css/resources.css" | relative_url }}">
   {%- endif -%}
