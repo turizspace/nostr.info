@@ -1,6 +1,15 @@
 /* make layout sizing reliable across elements */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Override minima theme wrapper to use consistent 1200px max-width */
+.wrapper {
+  max-width: 1200px !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+  padding-right: 30px !important;
+  padding-left: 30px !important;
+}
+
 .event {
   display: inline-block;
   background-color: lightgray;
@@ -89,14 +98,15 @@
   word-wrap: break-word;
 }
 
-/* Home page content improvements (moved from header.css)
-   These are presentation-only styles for the home/index page. */
+/* Page content improvements - consistent across all pages */
 .page-content .wrapper {
-  max-width: 980px;
-  margin-left: auto;
-  margin-right: auto;
+  max-width: 1200px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   line-height: 1.6;
   color: var(--text-on-brand);
+  padding-left: 30px !important;
+  padding-right: 30px !important;
 }
 
 .home img {

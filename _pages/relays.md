@@ -9,9 +9,6 @@ permalink: /relays/
 <script src="/js/relays.js"></script>
 
 <div class="relays-container">
-  <div class="page-header">
-    <h1>Nostr Relays</h1>
-  </div>
 
   <div class="controls-container">
     <select name="tab" id="tab" class="tab-select" onchange="setDirty()">
@@ -30,6 +27,28 @@ permalink: /relays/
           <option value="all">📋 All Relays</option>
         </select>
       </div>
+      
+      <div class="filter-group">
+        <label for="activity-filter">Activity Level:</label>
+        <select name="activity-filter" id="activity-filter" class="filter-select" onchange="setDirty()">
+          <option value="all" selected>All Activity Levels</option>
+          <option value="high">High (100+ events)</option>
+          <option value="medium">Medium (10-99 events)</option>
+          <option value="low">Low (1-9 events)</option>
+          <option value="none">No Activity</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="uptime-filter">Uptime:</label>
+        <select name="uptime-filter" id="uptime-filter" class="filter-select" onchange="setDirty()">
+          <option value="all" selected>All Uptimes</option>
+          <option value="connected">Currently Connected</option>
+          <option value="disconnected">Currently Disconnected</option>
+          <option value="never">Never Connected</option>
+        </select>
+      </div>
+      
       <button id="connectNewRelays" class="connect-button" onclick="connectRelays()">
         🔄 Connect New Relays
       </button>
