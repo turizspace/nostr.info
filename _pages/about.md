@@ -1,6 +1,7 @@
 ---
-permalink: /
+permalink: /about/
 layout: home
+title: About
 ---
 
 <link rel="stylesheet" href="/assets/css/main.css">
