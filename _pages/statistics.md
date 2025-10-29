@@ -24,53 +24,50 @@ permalink: /
     <button id="refresh-stats" class="refresh-button" onclick="refreshStatistics()">🔄 Refresh</button>
   </div>
 
-  <!-- Network Overview Infographic -->
+  <!-- Network Overview -->
   <section class="stats-section">
     <h2>📊 Network Overview</h2>
     <div class="overview-grid">
-      <div class="stat-card active-relays">
-        <div class="stat-icon">🟢</div>
+      <div class="stat-card total-relays">
+        <div class="stat-icon">🌐</div>
         <div class="stat-content">
-          <div class="stat-label">Active Relays</div>
-          <div class="stat-value" id="stat-active-relays">
+          <div class="stat-label">Total Relays</div>
+          <div class="stat-value" id="stat-total-relays">
             <span class="loading">...</span>
           </div>
-          <div class="stat-subtext" id="stat-total-relays">of <span class="loading">...</span> total</div>
+          <div class="stat-subtext"><span id="stat-connected-relays"><span class="loading">...</span></span> connected</div>
         </div>
       </div>
 
       <div class="stat-card total-events">
         <div class="stat-icon">📝</div>
         <div class="stat-content">
-          <div class="stat-label">Total Events</div>
+          <div class="stat-label">Events Collected</div>
           <div class="stat-value" id="stat-total-events">
             <span class="loading">...</span>
           </div>
-          <div class="stat-subtext" id="stat-events-rate">
-            <span class="loading">...</span> events/min
-          </div>
         </div>
       </div>
 
-      <div class="stat-card active-users">
-        <div class="stat-icon">👥</div>
+      <div class="stat-card response-time">
+        <div class="stat-icon">⚡</div>
         <div class="stat-content">
-          <div class="stat-label">Active Users</div>
-          <div class="stat-value" id="stat-active-users">
+          <div class="stat-label">Avg Response Time</div>
+          <div class="stat-value" id="stat-avg-response">
             <span class="loading">...</span>
           </div>
-          <div class="stat-subtext" id="stat-unique-pubkeys">unique pubkeys</div>
+          <div class="stat-subtext">milliseconds</div>
         </div>
       </div>
 
-      <div class="stat-card network-health">
-        <div class="stat-icon">❤️</div>
+      <div class="stat-card active-relays">
+        <div class="stat-icon">�</div>
         <div class="stat-content">
-          <div class="stat-label">Network Health</div>
-          <div class="stat-value" id="stat-network-health">
+          <div class="stat-label">Active Relays</div>
+          <div class="stat-value" id="stat-active-relays">
             <span class="loading">...</span>
           </div>
-          <div class="stat-subtext" id="stat-health-desc">Calculating...</div>
+          <div class="stat-subtext">responding with events</div>
         </div>
       </div>
     </div>
@@ -85,20 +82,14 @@ permalink: /
         <h3>Relay Discovery</h3>
         <div class="relay-discovery-grid">
           <div class="discovery-item">
-            <span class="disc-label">🎯 Bootstrap Relays</span>
-            <span class="disc-value" id="relays-bootstrap">
+            <span class="disc-label">📋 Curated Relays</span>
+            <span class="disc-value" id="relays-curated">
               <span class="loading">...</span>
             </span>
           </div>
           <div class="discovery-item">
             <span class="disc-label">🔍 Discovered Relays</span>
             <span class="disc-value" id="relays-discovered">
-              <span class="loading">...</span>
-            </span>
-          </div>
-          <div class="discovery-item">
-            <span class="disc-label">📋 Static Relays</span>
-            <span class="disc-value" id="relays-static">
               <span class="loading">...</span>
             </span>
           </div>
@@ -163,26 +154,19 @@ permalink: /
         </div>
         <div class="latency-breakdown">
           <div class="latency-item">
-            <span class="latency-type">Fastest</span>
+            <span class="latency-type">⚡ Fastest</span>
             <span class="latency-time" id="fastest-latency"><span class="loading">...</span></span>
+            <div class="latency-relay" id="fastest-relay"><span class="loading">...</span></div>
           </div>
           <div class="latency-item">
-            <span class="latency-type">Slowest</span>
+            <span class="latency-type">🐌 Slowest</span>
             <span class="latency-time" id="slowest-latency"><span class="loading">...</span></span>
+            <div class="latency-relay" id="slowest-relay"><span class="loading">...</span></div>
           </div>
         </div>
       </div>
 
     </div>
-  </section>
-
-  <!-- Event Volume Over Time -->
-  <section class="stats-section">
-    <h2>⏱️ Event Volume Over Time</h2>
-    <div class="chart-container">
-      <canvas id="events-timeline-chart"></canvas>
-    </div>
-    <div class="chart-legend" id="timeline-legend"></div>
   </section>
 
   <!-- Event Kind Distribution -->
@@ -247,6 +231,15 @@ permalink: /
       <div class="status-message">
         <span class="loading">Connecting to relays...</span>
       </div>
+    </div>
+    
+    <div class="info-box" style="margin-top: 1.5rem; padding: 1rem; background: #e7f3ff; border-left: 4px solid #007bff; border-radius: 4px;">
+      <h4 style="margin-top: 0; color: #004085;">ℹ️ Understanding the Connection Status</h4>
+      <ul style="margin-bottom: 0; padding-left: 1.5rem; color: #004085;">
+        <li><strong>Curated Relays:</strong> Our manually maintained list of known, reliable relays. These are relays we've collected and verified over time.</li>
+        <li><strong>Discovered Relays:</strong> Additional relays we find dynamically by reading user profiles (NIP-65 relay lists). As users publish events, we discover which relays they use and automatically try connecting to them to give you the most complete view of the Nostr network.</li>
+        <li><strong>Total:</strong> All unique relays combined (curated + discovered). We continuously discover new relays and attempt to connect to as many as possible.</li>
+      </ul>
     </div>
   </section>
 

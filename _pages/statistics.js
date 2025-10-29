@@ -8,21 +8,28 @@ const LIMIT = 100; // Events to request from each relay
 const UPDATE_INTERVAL = 5000; // Update stats every 5 seconds
 const CHART_UPDATE_INTERVAL = 10000; // Update charts every 10 seconds
 
-// Bootstrap relays - reliable, well-known relays for initial connection
-const BOOTSTRAP_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://relay.nostr.band',
-  'wss://nostr.wine',
-  'wss://relay.snort.social',
-  'wss://purplepag.es'
-];
+// Normalize relay URLs to avoid duplicates
+function normalizeRelayUrl(url) {
+  if (!url) return null;
+  
+  // Add wss:// if not present
+  if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+    url = 'wss://' + url;
+  }
+  
+  // Remove trailing slash
+  url = url.replace(/\/$/, '');
+  
+  // Convert to lowercase for consistency
+  url = url.toLowerCase();
+  
+  return url;
+}
 
 // Global data storage
 let relays = [];
 let discoveredRelays = new Map(); // URL -> relay object
 let allEvents = [];
-let eventTimeline = [];
 let eventKindCounts = {};
 let activeUsersPubkeys = new Set();
 let statsStartTime = Date.now();
@@ -31,7 +38,6 @@ let relayDiscoveryInProgress = false;
 let discoveredRelayCount = 0;
 
 // Chart instances
-let eventsTimelineChart = null;
 let eventKindsChart = null;
 
 // Initialize on page load
@@ -47,11 +53,10 @@ function initializeStatistics() {
   // Load relay list from Jekyll data
   const relayUrls = {{ site.data.relays.wss | jsonify }};
   
-  // Combine bootstrap relays with static list
-  const allRelayUrls = [...new Set([
-    ...BOOTSTRAP_RELAYS,
-    ...relayUrls.map(url => url.startsWith('wss://') ? url : `wss://${url}`)
-  ])];
+  // Normalize URLs to avoid duplicates
+  const allRelayUrls = [...new Set(
+    relayUrls.map(url => normalizeRelayUrl(url)).filter(url => url)
+  )];
   
   relays = allRelayUrls.map(url => createRelayObject(url));
   
@@ -60,7 +65,7 @@ function initializeStatistics() {
     discoveredRelays.set(relay.url, relay);
   });
   
-  console.log(`Initialized with ${relays.length} relays (${BOOTSTRAP_RELAYS.length} bootstrap)`);
+  console.log(`Initialized with ${relays.length} curated relays`);
 }
 
 function createRelayObject(url) {
@@ -77,7 +82,6 @@ function createRelayObject(url) {
     disconnectedAt: null,
     ws: null,
     tried: false,
-    isBootstrap: BOOTSTRAP_RELAYS.includes(url),
     isDiscovered: false,
     reliability: 0, // 0-100 score based on uptime and responsiveness
     lastConnectionAttempt: null
@@ -184,12 +188,6 @@ function setupWebSocket(relay, index) {
             event.receivedAt = Date.now();
             event.relayUrl = relay.url;
             allEvents.push(event);
-            
-            // Track for timeline
-            eventTimeline.push({
-              timestamp: event.created_at * 1000,
-              kind: event.kind
-            });
           }
         }
       } else if (data[0] === 'EOSE') {
@@ -276,15 +274,9 @@ function processRelayListEvent(event) {
   // Extract relay URLs from tags
   const relayUrls = event.tags
     .filter(tag => tag[0] === 'r' && tag[1])
-    .map(tag => {
-      let url = tag[1];
-      // Normalize URL
-      if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
-        url = 'wss://' + url;
-      }
-      return url;
-    })
+    .map(tag => normalizeRelayUrl(tag[1]))
     .filter(url => {
+      if (!url) return false;
       try {
         new URL(url);
         return true;
@@ -297,6 +289,10 @@ function processRelayListEvent(event) {
 }
 
 function addDiscoveredRelay(url) {
+  // Normalize the URL before checking/adding
+  url = normalizeRelayUrl(url);
+  if (!url) return;
+  
   // Check if we already have this relay
   if (discoveredRelays.has(url)) {
     const existingRelay = discoveredRelays.get(url);
@@ -361,26 +357,41 @@ function updateConnectionStatus() {
   const connected = relays.filter(r => r.connected).length;
   const total = relays.length;
   const percentage = ((connected / total) * 100).toFixed(1);
-  const bootstrapConnected = relays.filter(r => r.isBootstrap && r.connected).length;
-  const discoveredConnected = relays.filter(r => r.isDiscovered && r.connected).length;
+  
+  // Discovered relays: Additional relays found from user profiles (NIP-65)
+  const discoveredRelays = relays.filter(r => r.isDiscovered);
+  const discoveredConnected = discoveredRelays.filter(r => r.connected).length;
+  const discoveredTotal = discoveredRelays.length;
+  
+  // Curated relays: Relays from our curated list (not discovered)
+  const curatedRelays = relays.filter(r => !r.isDiscovered);
+  const curatedConnected = curatedRelays.filter(r => r.connected).length;
+  const curatedTotal = curatedRelays.length;
+  
+  // Verify math: total should equal curated + discovered
+  const calculatedTotal = curatedTotal + discoveredTotal;
+  const breakdown = `${curatedTotal} curated + ${discoveredTotal} discovered = ${calculatedTotal}`;
   
   statusEl.innerHTML = `
     <div class="status-grid">
-      <div class="status-item">
-        <span class="status-label">Connected:</span>
+      <div class="status-item" title="Currently active WebSocket connections out of all unique relays we know about. ${breakdown}">
+        <span class="status-label">🟢 Connected Relays:</span>
         <span class="status-value">${connected} / ${total}</span>
       </div>
-      <div class="status-item">
-        <span class="status-label">Connection Rate:</span>
+      <div class="status-item" title="Percentage of all relays we successfully connected to">
+        <span class="status-label">📊 Success Rate:</span>
         <span class="status-value">${percentage}%</span>
       </div>
-      <div class="status-item">
-        <span class="status-label">Bootstrap:</span>
-        <span class="status-value">${bootstrapConnected} / ${BOOTSTRAP_RELAYS.length}</span>
+      <div class="status-item" title="Our curated list of known, reliable relays">
+        <span class="status-label">📋 Curated:</span>
+        <span class="status-value">${curatedConnected} / ${curatedTotal}</span>
       </div>
-      <div class="status-item">
-        <span class="status-label">Discovered:</span>
-        <span class="status-value">${discoveredConnected} / ${discoveredRelayCount}</span>
+      <div class="status-item" title="Relays discovered from user profiles (NIP-65 relay lists) - we actively find and connect to these">
+        <span class="status-label">🔍 Discovered:</span>
+        <span class="status-value">${discoveredConnected} / ${discoveredTotal}</span>
+      </div>
+      <div class="status-breakdown" style="grid-column: 1 / -1; text-align: center; font-size: 0.875rem; color: #6c757d; padding: 0.5rem;">
+        Total = ${curatedTotal} curated + ${discoveredTotal} discovered
       </div>
       <div class="status-progress">
         <div class="progress-bar" style="width: ${percentage}%"></div>
@@ -418,71 +429,49 @@ function updateNetworkOverview() {
   const now = Date.now();
   const cutoffTime = now - timeRangeMs;
   
-  // Active relays (connected and sending events)
-  const activeRelays = relays.filter(r => r.connected && r.events > 0).length;
+  // Total relays being monitored
   const totalRelays = relays.length;
+  const connectedRelays = relays.filter(r => r.connected).length;
+  
+  // Active relays (connected and actually sending events)
+  const activeRelays = relays.filter(r => r.connected && r.events > 0).length;
   
   // Total events in time range
   const recentEvents = allEvents.filter(e => e.created_at * 1000 >= cutoffTime);
   const totalEvents = recentEvents.length;
   
-  // Events per minute
-  const elapsedMinutes = (now - statsStartTime) / 60000;
-  const eventsPerMinute = elapsedMinutes > 0 ? (totalEvents / elapsedMinutes).toFixed(1) : '0';
-  
-  // Active users
-  const activeUsers = activeUsersPubkeys.size;
-  
-  // Network health (0-100 score based on various factors)
-  const connectedRelaysPct = (relays.filter(r => r.connected).length / totalRelays) * 100;
-  const activeRelaysPct = (activeRelays / totalRelays) * 100;
-  const hasEventsScore = totalEvents > 0 ? 100 : 0;
-  const networkHealth = Math.round((connectedRelaysPct * 0.3 + activeRelaysPct * 0.4 + hasEventsScore * 0.3));
+  // Average response time across all relays with latency data
+  const relaysWithLatency = relays.filter(r => r.latencies.length > 0);
+  let avgResponse = 'N/A';
+  if (relaysWithLatency.length > 0) {
+    const allLatencies = relaysWithLatency.flatMap(r => r.latencies);
+    avgResponse = (allLatencies.reduce((sum, l) => sum + l, 0) / allLatencies.length).toFixed(0) + 'ms';
+  }
   
   // Update DOM
-  setElementText('stat-active-relays', activeRelays);
   setElementText('stat-total-relays', totalRelays);
+  setElementText('stat-connected-relays', connectedRelays);
+  setElementText('stat-active-relays', activeRelays);
   setElementText('stat-total-events', totalEvents.toLocaleString());
-  setElementText('stat-events-rate', eventsPerMinute);
-  setElementText('stat-active-users', activeUsers.toLocaleString());
-  
-  const healthEl = document.getElementById('stat-network-health');
-  if (healthEl) {
-    healthEl.textContent = `${networkHealth}%`;
-    healthEl.className = 'stat-value';
-    if (networkHealth >= 80) healthEl.classList.add('excellent');
-    else if (networkHealth >= 60) healthEl.classList.add('good');
-    else if (networkHealth >= 40) healthEl.classList.add('fair');
-    else healthEl.classList.add('poor');
-  }
-  
-  const healthDescEl = document.getElementById('stat-health-desc');
-  if (healthDescEl) {
-    if (networkHealth >= 80) healthDescEl.textContent = 'Excellent';
-    else if (networkHealth >= 60) healthDescEl.textContent = 'Good';
-    else if (networkHealth >= 40) healthDescEl.textContent = 'Fair';
-    else healthDescEl.textContent = 'Poor';
-  }
+  setElementText('stat-avg-response', avgResponse);
 }
 
 function updateNetworkAnalytics() {
   const totalRelays = relays.length;
   
   // Relay discovery stats
-  const bootstrapCount = relays.filter(r => r.isBootstrap).length;
   const discoveredCount = relays.filter(r => r.isDiscovered).length;
-  const staticCount = relays.filter(r => !r.isBootstrap && !r.isDiscovered).length;
+  const curatedCount = relays.filter(r => !r.isDiscovered).length;
   const allActive = relays.filter(r => r.connected && r.events > 0).length;
   
-  setElementText('relays-bootstrap', `${bootstrapCount} (${relays.filter(r => r.isBootstrap && r.connected).length} connected)`);
   setElementText('relays-discovered', `${discoveredCount} (${relays.filter(r => r.isDiscovered && r.connected).length} connected)`);
-  setElementText('relays-static', `${staticCount} (${relays.filter(r => !r.isBootstrap && !r.isDiscovered && r.connected).length} connected)`);
+  setElementText('relays-curated', `${curatedCount} (${relays.filter(r => !r.isDiscovered && r.connected).length} connected)`);
   setElementText('relays-all-active', allActive);
   
   // Relay performance categories
   const highPerf = relays.filter(r => r.events >= LIMIT && r.connected).length;
   const highVol = relays.filter(r => r.events >= LIMIT).length;
-  const active = relays.filter(r => r.events > 0).length;
+  const active = relays.filter(r => r.connected && r.events > 0).length; // Same as allActive
   const connected = relays.filter(r => r.connected).length;
   
   setElementText('relays-high-perf', highPerf);
@@ -496,16 +485,28 @@ function updateNetworkAnalytics() {
   setBarWidth('relays-active-bar', (active / totalRelays) * 100);
   setBarWidth('relays-connected-bar', (connected / totalRelays) * 100);
   
-  // Average latency
-  const allLatencies = relays.flatMap(r => r.latencies);
-  if (allLatencies.length > 0) {
+  // Average latency with relay names
+  const relaysWithLatency = relays.filter(r => r.latencies.length > 0);
+  if (relaysWithLatency.length > 0) {
+    // Calculate average latency for each relay
+    const relayAvgLatencies = relaysWithLatency.map(r => ({
+      url: r.url,
+      avgLatency: r.latencies.reduce((sum, l) => sum + l, 0) / r.latencies.length
+    }));
+    
+    // Find fastest and slowest
+    const fastest = relayAvgLatencies.reduce((min, r) => r.avgLatency < min.avgLatency ? r : min);
+    const slowest = relayAvgLatencies.reduce((max, r) => r.avgLatency > max.avgLatency ? r : max);
+    
+    // Overall average
+    const allLatencies = relaysWithLatency.flatMap(r => r.latencies);
     const avgLatency = (allLatencies.reduce((sum, l) => sum + l, 0) / allLatencies.length).toFixed(0);
-    const fastestLatency = Math.min(...allLatencies).toFixed(0);
-    const slowestLatency = Math.max(...allLatencies).toFixed(0);
     
     setElementText('avg-latency', avgLatency);
-    setElementText('fastest-latency', `${fastestLatency}ms`);
-    setElementText('slowest-latency', `${slowestLatency}ms`);
+    setElementText('fastest-latency', `${fastest.avgLatency.toFixed(0)}ms`);
+    setElementText('fastest-relay', fastest.url);
+    setElementText('slowest-latency', `${slowest.avgLatency.toFixed(0)}ms`);
+    setElementText('slowest-relay', slowest.url);
   }
 }
 
@@ -596,56 +597,6 @@ function setupCharts() {
 }
 
 function initializeCharts() {
-  // Events timeline chart
-  const timelineCanvas = document.getElementById('events-timeline-chart');
-  if (timelineCanvas) {
-    eventsTimelineChart = new Chart(timelineCanvas, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Events',
-          data: [],
-          borderColor: 'rgb(75, 192, 192)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          tension: 0.4,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top'
-          },
-          tooltip: {
-            mode: 'index',
-            intersect: false
-          }
-        },
-        scales: {
-          x: {
-            display: true,
-            title: {
-              display: true,
-              text: 'Time'
-            }
-          },
-          y: {
-            display: true,
-            title: {
-              display: true,
-              text: 'Event Count'
-            },
-            beginAtZero: true
-          }
-        }
-      }
-    });
-  }
-  
   // Event kinds pie chart
   const kindsCanvas = document.getElementById('event-kinds-chart');
   if (kindsCanvas) {
@@ -700,39 +651,7 @@ function initializeCharts() {
 }
 
 function updateCharts() {
-  updateTimelineChart();
   updateKindsChart();
-}
-
-function updateTimelineChart() {
-  if (!eventsTimelineChart) return;
-  
-  const now = Date.now();
-  const cutoffTime = now - timeRangeMs;
-  
-  // Group events by time bucket
-  const bucketSize = timeRangeMs / 24; // 24 buckets
-  const buckets = new Array(24).fill(0);
-  const labels = [];
-  
-  for (let i = 0; i < 24; i++) {
-    const bucketTime = cutoffTime + (i * bucketSize);
-    labels.push(formatTimeBucket(bucketTime, bucketSize));
-  }
-  
-  // Count events in each bucket
-  eventTimeline.forEach(event => {
-    if (event.timestamp >= cutoffTime) {
-      const bucketIndex = Math.floor((event.timestamp - cutoffTime) / bucketSize);
-      if (bucketIndex >= 0 && bucketIndex < 24) {
-        buckets[bucketIndex]++;
-      }
-    }
-  });
-  
-  eventsTimelineChart.data.labels = labels;
-  eventsTimelineChart.data.datasets[0].data = buckets;
-  eventsTimelineChart.update('none'); // Update without animation for performance
 }
 
 function updateKindsChart() {
