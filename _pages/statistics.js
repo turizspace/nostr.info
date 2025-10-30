@@ -37,6 +37,122 @@ let timeRangeMs = 24 * 60 * 60 * 1000; // Default 24 hours
 let relayDiscoveryInProgress = false;
 let discoveredRelayCount = 0;
 
+const ICON_CONNECTED = `{% fa_svg fas.fa-circle-check %}`;
+const ICON_SUCCESS = `{% fa_svg fas.fa-gauge-high %}`;
+const ICON_CURATED = `{% fa_svg fas.fa-clipboard-list %}`;
+const ICON_DISCOVERED = `{% fa_svg fas.fa-compass %}`;
+
+const NIP_BASE_URL = 'https://github.com/nostr-protocol/nips/blob/master/';
+const EVENT_KIND_INFO = {
+  0: { label: 'User Metadata', nip: `${NIP_BASE_URL}01.md` },
+  1: { label: 'Text Note', nip: `${NIP_BASE_URL}10.md` },
+  2: { label: 'Recommend Relay', nip: `${NIP_BASE_URL}01.md` },
+  3: { label: 'Follow List', nip: `${NIP_BASE_URL}02.md` },
+  4: { label: 'Encrypted Direct Message', nip: `${NIP_BASE_URL}04.md` },
+  5: { label: 'Event Deletion', nip: `${NIP_BASE_URL}09.md` },
+  6: { label: 'Repost', nip: `${NIP_BASE_URL}18.md` },
+  7: { label: 'Reaction', nip: `${NIP_BASE_URL}25.md` },
+  8: { label: 'Badge Award', nip: `${NIP_BASE_URL}58.md` },
+  9: { label: 'Chat Message', nip: `${NIP_BASE_URL}C7.md` },
+  11: { label: 'Thread', nip: `${NIP_BASE_URL}7D.md` },
+  13: { label: 'Seal', nip: `${NIP_BASE_URL}59.md` },
+  14: { label: 'Private Direct Message', nip: `${NIP_BASE_URL}17.md` },
+  15: { label: 'File Message', nip: `${NIP_BASE_URL}17.md` },
+  16: { label: 'Generic Repost', nip: `${NIP_BASE_URL}18.md` },
+  17: { label: 'External Reaction', nip: `${NIP_BASE_URL}25.md` },
+  20: { label: 'Picture Event', nip: `${NIP_BASE_URL}68.md` },
+  21: { label: 'Video Event', nip: `${NIP_BASE_URL}71.md` },
+  22: { label: 'Portrait Video Event', nip: `${NIP_BASE_URL}71.md` },
+  30: { label: 'Internal Reference', nip: 'https://wikistr.com/nkbip-03*fd208ee8c8f283780a9552896e4823cc9dc6bfd442063889577106940fd927c1' },
+  31: { label: 'External Web Reference', nip: 'https://wikistr.com/nkbip-03*fd208ee8c8f283780a9552896e4823cc9dc6bfd442063889577106940fd927c1' },
+  32: { label: 'Hardcopy Reference', nip: 'https://wikistr.com/nkbip-03*fd208ee8c8f283780a9552896e4823cc9dc6bfd442063889577106940fd927c1' },
+  33: { label: 'Prompt Reference', nip: 'https://wikistr.com/nkbip-03*fd208ee8c8f283780a9552896e4823cc9dc6bfd442063889577106940fd927c1' },
+  40: { label: 'Channel Creation', nip: `${NIP_BASE_URL}28.md` },
+  41: { label: 'Channel Metadata', nip: `${NIP_BASE_URL}28.md` },
+  42: { label: 'Channel Message', nip: `${NIP_BASE_URL}28.md` },
+  43: { label: 'Channel Hide Message', nip: `${NIP_BASE_URL}28.md` },
+  44: { label: 'Channel Mute User', nip: `${NIP_BASE_URL}28.md` },
+  60: { label: 'Ride Sharing', nip: null },
+  62: { label: 'Request to Vanish', nip: `${NIP_BASE_URL}62.md` },
+  64: { label: 'Chess (PGN)', nip: `${NIP_BASE_URL}64.md` },
+  1059: { label: 'Gift Wrap', nip: `${NIP_BASE_URL}59.md` },
+  1063: { label: 'File Metadata', nip: `${NIP_BASE_URL}94.md` },
+  1068: { label: 'Poll', nip: `${NIP_BASE_URL}88.md` },
+  1111: { label: 'Comment', nip: `${NIP_BASE_URL}22.md` },
+  1222: { label: 'Voice Message', nip: `${NIP_BASE_URL}A0.md` },
+  1311: { label: 'Live Chat Message', nip: `${NIP_BASE_URL}53.md` },
+  1984: { label: 'Reporting', nip: `${NIP_BASE_URL}56.md` },
+  1985: { label: 'Label', nip: `${NIP_BASE_URL}32.md` },
+  1986: { label: 'Relay Review', nip: null },
+  2003: { label: 'Torrent', nip: `${NIP_BASE_URL}35.md` },
+  2004: { label: 'Torrent Comment', nip: `${NIP_BASE_URL}35.md` },
+  22242: { label: 'Client Authentication', nip: `${NIP_BASE_URL}42.md` },
+  22820: { label: 'WebRTC Connection', nip: null },
+  22955: { label: 'WebRTC Signaling', nip: null },
+  23194: { label: 'Wallet Request', nip: `${NIP_BASE_URL}47.md` },
+  23195: { label: 'Wallet Response', nip: `${NIP_BASE_URL}47.md` },
+  24133: { label: 'Nostr Connect', nip: `${NIP_BASE_URL}46.md` },
+  27235: { label: 'HTTP Auth', nip: `${NIP_BASE_URL}98.md` },
+  30000: { label: 'Follow Set', nip: `${NIP_BASE_URL}51.md` },
+  30001: { label: 'Generic Set', nip: `${NIP_BASE_URL}51.md` },
+  30002: { label: 'Relay Set', nip: `${NIP_BASE_URL}51.md` },
+  30003: { label: 'Bookmark Set', nip: `${NIP_BASE_URL}51.md` },
+  30004: { label: 'Curation Set', nip: `${NIP_BASE_URL}51.md` },
+  30008: { label: 'Profile Badges', nip: `${NIP_BASE_URL}58.md` },
+  30009: { label: 'Badge Definition', nip: `${NIP_BASE_URL}58.md` },
+  30015: { label: 'Interest Set', nip: `${NIP_BASE_URL}51.md` },
+  30023: { label: 'Long-form Content', nip: `${NIP_BASE_URL}23.md` },
+  30024: { label: 'Draft Long-form Content', nip: `${NIP_BASE_URL}23.md` },
+  30030: { label: 'Emoji Set', nip: `${NIP_BASE_URL}51.md` },
+  30311: { label: 'Live Event', nip: `${NIP_BASE_URL}53.md` },
+  30312: { label: 'Interactive Room', nip: `${NIP_BASE_URL}53.md` },
+  30313: { label: 'Conference Event', nip: `${NIP_BASE_URL}53.md` },
+  30315: { label: 'User Status', nip: `${NIP_BASE_URL}38.md` },
+  30818: { label: 'Wiki Article', nip: `${NIP_BASE_URL}54.md` },
+  30819: { label: 'Wiki Redirect', nip: `${NIP_BASE_URL}54.md` },
+  31922: { label: 'Date Calendar Event', nip: `${NIP_BASE_URL}52.md` },
+  31923: { label: 'Time Calendar Event', nip: `${NIP_BASE_URL}52.md` },
+  31924: { label: 'Calendar', nip: `${NIP_BASE_URL}52.md` },
+  31925: { label: 'Calendar RSVP', nip: `${NIP_BASE_URL}52.md` },
+  31989: { label: 'Handler Recommendation', nip: `${NIP_BASE_URL}89.md` },
+  31990: { label: 'Handler Information', nip: `${NIP_BASE_URL}89.md` },
+  34550: { label: 'Community Definition', nip: `${NIP_BASE_URL}72.md` },
+  39089: { label: 'Starter Pack', nip: `${NIP_BASE_URL}51.md` },
+  39701: { label: 'Web Bookmark', nip: `${NIP_BASE_URL}B0.md` },
+  9734: { label: 'Zap Request', nip: `${NIP_BASE_URL}57.md` },
+  9735: { label: 'Zap', nip: `${NIP_BASE_URL}57.md` },
+  9802: { label: 'Highlight', nip: `${NIP_BASE_URL}84.md` },
+  10000: { label: 'Mute List', nip: `${NIP_BASE_URL}51.md` },
+  10001: { label: 'Pin List', nip: `${NIP_BASE_URL}51.md` },
+  10002: { label: 'Relay List Metadata', nip: `${NIP_BASE_URL}65.md` },
+  10003: { label: 'Bookmark List', nip: `${NIP_BASE_URL}51.md` },
+  10004: { label: 'Communities List', nip: `${NIP_BASE_URL}51.md` },
+  10005: { label: 'Public Chats List', nip: `${NIP_BASE_URL}51.md` },
+  10006: { label: 'Blocked Relays List', nip: `${NIP_BASE_URL}51.md` },
+  10007: { label: 'Search Relays List', nip: `${NIP_BASE_URL}51.md` },
+  10009: { label: 'User Groups', nip: `${NIP_BASE_URL}51.md` },
+  10012: { label: 'Favorite Relays List', nip: `${NIP_BASE_URL}51.md` },
+  10013: { label: 'Private Event Relay List', nip: `${NIP_BASE_URL}37.md` },
+  10015: { label: 'Interests List', nip: `${NIP_BASE_URL}51.md` },
+  10019: { label: 'Nutzap Mint Recommendation', nip: `${NIP_BASE_URL}61.md` },
+  10020: { label: 'Media Follows', nip: `${NIP_BASE_URL}51.md` },
+  10030: { label: 'User Emoji List', nip: `${NIP_BASE_URL}51.md` },
+  10050: { label: 'Relay List to Receive DMs', nip: `${NIP_BASE_URL}17.md` },
+  10051: { label: 'KeyPackage Relays List', nip: `${NIP_BASE_URL}EE.md` },
+  10063: { label: 'User Server List', nip: 'https://github.com/hzrd149/blossom' },
+  10096: { label: 'File Storage Server List', nip: `${NIP_BASE_URL}96.md` },
+  10166: { label: 'Relay Monitor Announcement', nip: `${NIP_BASE_URL}66.md` },
+  10312: { label: 'Room Presence', nip: `${NIP_BASE_URL}53.md` },
+  10377: { label: 'Proxy Announcement', nip: 'https://github.com/Origami74/nostr-epoxy-reverse-proxy' },
+  11111: { label: 'Transport Method Announcement', nip: 'https://github.com/Origami74/nostr-epoxy-reverse-proxy' },
+  13194: { label: 'Wallet Info', nip: `${NIP_BASE_URL}47.md` },
+  17375: { label: 'Cashu Wallet Event', nip: `${NIP_BASE_URL}60.md` },
+  21000: { label: 'Lightning Pub RPC', nip: 'https://github.com/shocknet/Lightning.Pub/blob/master/proto/autogenerated/client.md' },
+  38383: { label: 'Peer-to-peer Order Event', nip: `${NIP_BASE_URL}69.md` },
+  30078: { label: 'App-specific Data', nip: `${NIP_BASE_URL}78.md` },
+  24242: { label: 'Media Server Blob', nip: 'https://github.com/hzrd149/blossom' }
+};
+
 // Chart instances
 let eventKindsChart = null;
 
@@ -375,19 +491,19 @@ function updateConnectionStatus() {
   statusEl.innerHTML = `
     <div class="status-grid">
       <div class="status-item" title="Currently active WebSocket connections out of all unique relays we know about. ${breakdown}">
-        <span class="status-label">🟢 Connected Relays:</span>
+        <span class="status-label">${ICON_CONNECTED} Connected Relays:</span>
         <span class="status-value">${connected} / ${total}</span>
       </div>
       <div class="status-item" title="Percentage of all relays we successfully connected to">
-        <span class="status-label">📊 Success Rate:</span>
+        <span class="status-label">${ICON_SUCCESS} Success Rate:</span>
         <span class="status-value">${percentage}%</span>
       </div>
       <div class="status-item" title="Our curated list of known, reliable relays">
-        <span class="status-label">📋 Curated:</span>
+        <span class="status-label">${ICON_CURATED} Curated:</span>
         <span class="status-value">${curatedConnected} / ${curatedTotal}</span>
       </div>
       <div class="status-item" title="Relays discovered from user profiles (NIP-65 relay lists) - we actively find and connect to these">
-        <span class="status-label">🔍 Discovered:</span>
+        <span class="status-label">${ICON_DISCOVERED} Discovered:</span>
         <span class="status-value">${discoveredConnected} / ${discoveredTotal}</span>
       </div>
       <div class="status-breakdown" style="grid-column: 1 / -1; text-align: center; font-size: 0.875rem; color: #6c757d; padding: 0.5rem;">
@@ -562,12 +678,16 @@ function updateKindsTable() {
   const totalEvents = sortedKinds.reduce((sum, [_, count]) => sum + count, 0);
   
   tbody.innerHTML = sortedKinds.map(([kind, count]) => {
+    const kindId = parseInt(kind);
     const percentage = ((count / totalEvents) * 100).toFixed(1);
-    const kindName = getKindName(parseInt(kind));
+    const { label, nip } = getKindInfo(kindId);
+    const labelHtml = nip
+      ? `<a href="${nip}" target="_blank" rel="noopener">${label}</a>`
+      : label;
     
     return `
       <tr>
-        <td><strong>${kindName}</strong> <small>(${kind})</small></td>
+        <td><strong>${labelHtml}</strong> <small>(${kindId})</small></td>
         <td>${count.toLocaleString()}</td>
         <td>${percentage}%</td>
         <td>
@@ -663,7 +783,7 @@ function updateKindsChart() {
   
   if (sortedKinds.length === 0) return;
   
-  const labels = sortedKinds.map(([kind, _]) => getKindName(parseInt(kind)));
+  const labels = sortedKinds.map(([kind, _]) => getKindInfo(parseInt(kind)).label);
   const data = sortedKinds.map(([_, count]) => count);
   
   eventKindsChart.data.labels = labels;
@@ -759,35 +879,6 @@ function formatTimeBucket(timestamp, bucketSize) {
   }
 }
 
-function getKindName(kind) {
-  const kindNames = {
-    0: 'Metadata',
-    1: 'Text Note',
-    2: 'Relay Recommendation',
-    3: 'Contacts',
-    4: 'Encrypted DM',
-    5: 'Event Deletion',
-    6: 'Repost',
-    7: 'Reaction',
-    30: 'Chess (PGN)',
-    40: 'Channel Creation',
-    41: 'Channel Metadata',
-    42: 'Channel Message',
-    43: 'Channel Hide',
-    44: 'Channel Mute',
-    60: 'Ride Sharing',
-    1059: 'Gift Wrap',
-    1984: 'Reporting',
-    9734: 'Zap Request',
-    9735: 'Zap',
-    10000: 'Mute List',
-    10001: 'Pin List',
-    10002: 'Relay List',
-    22820: 'WebRTC Connection',
-    22955: 'WebRTC Signaling',
-    30000: 'Categorized People',
-    30001: 'Categorized Bookmarks',
-    30023: 'Long-form Content'
-  };
-  return kindNames[kind] || `Kind ${kind}`;
+function getKindInfo(kind) {
+  return EVENT_KIND_INFO[kind] || { label: `Kind ${kind}`, nip: null };
 }

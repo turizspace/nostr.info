@@ -32,6 +32,14 @@
   font-size:1.125rem;
 }
 
+/* Size and align the inline SVG icon in the title */
+.site-title .icon{
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  margin-right: 0.35rem;
+}
+
 .site-nav{
   display:flex;
   align-items:center;

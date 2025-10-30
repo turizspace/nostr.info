@@ -36,11 +36,14 @@
 .site-copy{ margin-top:0.75rem; color:var(--muted); font-size:0.9rem }
 
 /* Override minima svg icon padding so footer icons are not cropped */
-.site-footer .svg-icon{
+.site-footer .svg-icon,
+.site-footer .icon{
   padding-right:0;
   margin-right:0.4rem;
   width:18px;
   height:18px;
+  display:inline-block;
+  fill:currentColor;
 }
 
 @media (max-width:720px){

@@ -358,10 +358,16 @@ function updateFilterSections() {
   // Update category filters
   updateFilterSection(categoryFilters, ['client', 'relay', 'library', 'tool'], 'category')
   
-  // Update platform filters with icons
+  // Update platform filters with Font Awesome SVG icons (FA5 syntax)
   const platformsWithIcons = {
-    'web': '🌐', 'android': '🤖', 'ios': '📱', 'desktop': '💻', 
-    'linux': '🐧', 'windows': '🪟', 'macos': '🍎', 'terminal': '⌨️'
+    web: `{% fa_svg fas.fa-globe %}`,
+    android: `{% fa_svg fab.fa-android %}`,
+    ios: `{% fa_svg fab.fa-apple %}`,
+    desktop: `{% fa_svg fas.fa-desktop %}`,
+    linux: `{% fa_svg fab.fa-linux %}`,
+    windows: `{% fa_svg fab.fa-windows %}`,
+    macos: `{% fa_svg fab.fa-apple %}`,
+    terminal: `{% fa_svg fas.fa-terminal %}`
   }
   updateFilterSection(platformFilters, Object.keys(platformsWithIcons), 'platform', platformsWithIcons)
   

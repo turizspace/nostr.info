@@ -15,21 +15,21 @@ permalink: /
     <div class="filter-group">
       <label for="time-range">Time Range:</label>
       <select name="time-range" id="time-range" class="filter-select" onchange="updateTimeRange()">
-        <option value="24h" selected>📅 Last 24 Hours</option>
-        <option value="7d">📅 Last 7 Days</option>
-        <option value="30d">📅 Last 30 Days</option>
-        <option value="90d">📅 Last 90 Days</option>
+        <option value="24h" selected>Last 24 Hours</option>
+        <option value="7d">Last 7 Days</option>
+        <option value="30d">Last 30 Days</option>
+        <option value="90d">Last 90 Days</option>
       </select>
     </div>
-    <button id="refresh-stats" class="refresh-button" onclick="refreshStatistics()">🔄 Refresh</button>
+  <button id="refresh-stats" class="refresh-button" onclick="refreshStatistics()">{% fa_svg fas.fa-arrows-rotate %} Refresh</button>
   </div>
 
   <!-- Network Overview -->
   <section class="stats-section">
-    <h2>📊 Network Overview</h2>
+  <h2>{% fa_svg fas.fa-chart-line %} Network Overview</h2>
     <div class="overview-grid">
       <div class="stat-card total-relays">
-        <div class="stat-icon">🌐</div>
+  <div class="stat-icon">{% fa_svg fas.fa-globe %}</div>
         <div class="stat-content">
           <div class="stat-label">Total Relays</div>
           <div class="stat-value" id="stat-total-relays">
@@ -40,7 +40,7 @@ permalink: /
       </div>
 
       <div class="stat-card total-events">
-        <div class="stat-icon">📝</div>
+  <div class="stat-icon">{% fa_svg fas.fa-database %}</div>
         <div class="stat-content">
           <div class="stat-label">Events Collected</div>
           <div class="stat-value" id="stat-total-events">
@@ -50,7 +50,7 @@ permalink: /
       </div>
 
       <div class="stat-card response-time">
-        <div class="stat-icon">⚡</div>
+  <div class="stat-icon">{% fa_svg fas.fa-bolt %}</div>
         <div class="stat-content">
           <div class="stat-label">Avg Response Time</div>
           <div class="stat-value" id="stat-avg-response">
@@ -61,7 +61,7 @@ permalink: /
       </div>
 
       <div class="stat-card active-relays">
-        <div class="stat-icon">�</div>
+  <div class="stat-icon">{% fa_svg fas.fa-signal %}</div>
         <div class="stat-content">
           <div class="stat-label">Active Relays</div>
           <div class="stat-value" id="stat-active-relays">
@@ -75,26 +75,26 @@ permalink: /
 
   <!-- Network Analytics -->
   <section class="stats-section">
-    <h2>📈 Network Analytics</h2>
+  <h2>{% fa_svg fas.fa-square-poll-vertical %} Network Analytics</h2>
     <div class="analytics-grid">
       
       <div class="analytics-card">
         <h3>Relay Discovery</h3>
         <div class="relay-discovery-grid">
           <div class="discovery-item">
-            <span class="disc-label">📋 Curated Relays</span>
+            <span class="disc-label">{% fa_svg fas.fa-clipboard-list %} Curated Relays</span>
             <span class="disc-value" id="relays-curated">
               <span class="loading">...</span>
             </span>
           </div>
           <div class="discovery-item">
-            <span class="disc-label">🔍 Discovered Relays</span>
+            <span class="disc-label">{% fa_svg fas.fa-magnifying-glass %} Discovered Relays</span>
             <span class="disc-value" id="relays-discovered">
               <span class="loading">...</span>
             </span>
           </div>
           <div class="discovery-item">
-            <span class="disc-label">✅ All Active</span>
+            <span class="disc-label">{% fa_svg fas.fa-circle-check %} All Active</span>
             <span class="disc-value" id="relays-all-active">
               <span class="loading">...</span>
             </span>
@@ -154,12 +154,12 @@ permalink: /
         </div>
         <div class="latency-breakdown">
           <div class="latency-item">
-            <span class="latency-type">⚡ Fastest</span>
+            <span class="latency-type">{% fa_svg fas.fa-bolt %} Fastest</span>
             <span class="latency-time" id="fastest-latency"><span class="loading">...</span></span>
             <div class="latency-relay" id="fastest-relay"><span class="loading">...</span></div>
           </div>
           <div class="latency-item">
-            <span class="latency-type">🐌 Slowest</span>
+            <span class="latency-type">{% fa_svg fas.fa-hourglass-end %} Slowest</span>
             <span class="latency-time" id="slowest-latency"><span class="loading">...</span></span>
             <div class="latency-relay" id="slowest-relay"><span class="loading">...</span></div>
           </div>
@@ -171,7 +171,7 @@ permalink: /
 
   <!-- Event Kind Distribution -->
   <section class="stats-section">
-    <h2>🎯 Event Kind Distribution</h2>
+  <h2>{% fa_svg fas.fa-bullseye %} Event Kind Distribution</h2>
     <div class="distribution-container">
       <div class="chart-container chart-small">
         <canvas id="event-kinds-chart"></canvas>
@@ -200,7 +200,7 @@ permalink: /
 
   <!-- Top Relays by Activity -->
   <section class="stats-section">
-    <h2>🏆 Top Relays by Activity</h2>
+  <h2>{% fa_svg fas.fa-trophy %} Top Relays by Activity</h2>
     <div class="top-relays-container">
       <table class="top-relays-table">
         <thead>
@@ -226,7 +226,7 @@ permalink: /
 
   <!-- Connection Status -->
   <section class="stats-section">
-    <h2>🔌 Live Connection Status</h2>
+  <h2>{% fa_svg fas.fa-plug %} Live Connection Status</h2>
     <div class="connection-status" id="connection-status">
       <div class="status-message">
         <span class="loading">Connecting to relays...</span>

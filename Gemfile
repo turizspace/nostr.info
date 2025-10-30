@@ -16,6 +16,7 @@ gem "minima", "~> 2.5"
 # If you have any plugins, put them here!
 group :jekyll_plugins do
   gem "jekyll-feed", "~> 0.12"
+  gem "jekyll-fontawesome-svg", "~> 0.4.0"
 end
 
 # Fix for Ruby 3.3+ compatibility

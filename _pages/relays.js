@@ -42,6 +42,10 @@ window.addEventListener('load', () => {
   window.degreeFilter = document.getElementById("degree-filter")
   window.output = document.getElementById("output")
   window.expandedEvent = ""
+  
+  // Add scroll listeners to pause updates during scrolling
+  window.addEventListener('scroll', handleScrollStart, true) // Use capture to catch all scroll events
+  output.addEventListener('scroll', handleScrollStart)
 })
 
 const LIMIT = 100 // how many events to show
@@ -51,6 +55,18 @@ const meta = {}
 const follows = {}
 
 var tUpdate = 0
+var isScrolling = false
+var scrollTimeout = null
+
+// Detect when user is scrolling and pause updates
+function handleScrollStart() {
+  isScrolling = true
+  clearTimeout(scrollTimeout)
+  scrollTimeout = setTimeout(() => {
+    isScrolling = false
+  }, 150) // User stopped scrolling for 150ms
+}
+
 function setDirty() {
   const t = ts()
   // ms since last scheduled update. Negative if in the future.
@@ -60,7 +76,13 @@ function setDirty() {
     // [throttleMs] ms after the prior one.
     tUpdate = Math.max(tUpdate + throttleMs, t)    
     setTimeout(() => {
-      update()
+      // Skip update if user is actively scrolling
+      if (!isScrolling) {
+        update()
+      } else {
+        // Reschedule for later
+        setDirty()
+      }
     }, tUpdate - t)
   }
 }
@@ -80,9 +102,10 @@ function update() {
   const scrollLeft = outputElement.scrollLeft
   const scrollTop = outputElement.scrollTop
   
-  // Find any scrollable table wrapper
-  const tableWrapper = outputElement.querySelector('.relay-table-wrapper') || outputElement.querySelector('table')
+  // Find any scrollable table wrapper and save its scroll position
+  const tableWrapper = outputElement.querySelector('.relay-table-wrapper')
   const tableScrollLeft = tableWrapper ? tableWrapper.scrollLeft : 0
+  const hasScrolled = tableScrollLeft > 0
 
   eventFilters.hidden = true
   relayFilters.hidden = true
@@ -102,17 +125,26 @@ function update() {
       break
   }
   
-  // Restore scroll position after updating
-  requestAnimationFrame(() => {
+  // Only restore scroll if user had scrolled before
+  if (hasScrolled || scrollLeft > 0 || scrollTop > 0) {
+    // Restore scroll position after updating - use immediate + RAF for reliability
+    const newTableWrapper = outputElement.querySelector('.relay-table-wrapper')
+    if (newTableWrapper && tableScrollLeft > 0) {
+      // Set immediately
+      newTableWrapper.scrollLeft = tableScrollLeft
+      // Also set after next paint
+      requestAnimationFrame(() => {
+        if (newTableWrapper.scrollLeft !== tableScrollLeft) {
+          newTableWrapper.scrollLeft = tableScrollLeft
+        }
+      })
+      // Add scroll listener to this new wrapper
+      newTableWrapper.addEventListener('scroll', handleScrollStart, { passive: true })
+    }
+    
     outputElement.scrollLeft = scrollLeft
     outputElement.scrollTop = scrollTop
-    
-    // Restore table wrapper scroll if it exists
-    const newTableWrapper = outputElement.querySelector('.relay-table-wrapper') || outputElement.querySelector('table')
-    if (newTableWrapper) {
-      newTableWrapper.scrollLeft = tableScrollLeft
-    }
-  })
+  }
 }
 
 function connectRelays() {

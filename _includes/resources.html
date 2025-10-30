@@ -10,36 +10,36 @@
   <div class="content-area">
     <!-- Mobile Filter Toggle -->
     <button class="mobile-filter-toggle" id="mobile-filter-toggle">
-      <span class="filter-icon">🔍</span> Filters
+      <span class="filter-icon">{% fa_svg fas.fa-filter %}</span> Filters
       <span class="filter-count" id="mobile-filter-count" style="display:none;"></span>
     </button>
 
     <!-- Filters Sidebar -->
     <aside class="filters-sidebar" id="filters-sidebar">
       <div class="filter-section">
-        <h3>🔍 Search</h3>
+        <h3>{% fa_svg fas.fa-magnifying-glass %} Search</h3>
         <div class="search-container">
           <input type="text" id="searchInput" placeholder="Search projects..." class="search-input">
         </div>
       </div>
 
       <div class="filter-section">
-        <h3>🏷️ Categories</h3>
+        <h3>{% fa_svg fas.fa-tags %} Categories</h3>
         <div id="category-filters" class="filter-group"></div>
       </div>
 
       <div class="filter-section">
-        <h3>💻 Platforms</h3>
+        <h3>{% fa_svg fas.fa-laptop %} Platforms</h3>
         <div id="platform-filters" class="filter-group"></div>
       </div>
 
       <div class="filter-section">
-        <h3>🔗 NIPs</h3>
+        <h3>{% fa_svg fas.fa-link %} NIPs</h3>
         <div id="nip-filters" class="filter-group"></div>
       </div>
 
       <div class="filter-section">
-        <h3>🏗️ Architecture</h3>
+        <h3>{% fa_svg fas.fa-diagram-project %} Architecture</h3>
         <div id="arch-filters" class="filter-group"></div>
       </div>
 
@@ -87,7 +87,7 @@
               </a>
             {%- endif -%}
             {%- if p.content.size > 20 -%}
-              <a href="{{ p.url }}" class="details-link" title="View Details">🔍</a>
+              <a href="{{ p.url }}" class="details-link" title="View Details">{% fa_svg fas.fa-magnifying-glass %}</a>
             {%- endif -%}
           </div>
         </div>
@@ -109,11 +109,11 @@
         {% endif %}
 
         <div class="dev">
-          {% if p.license %}<span class="license">📄 {{ p.license }}</span>{% endif %}
-          {% if p.progLang %}<span class="prog-lang">💻 {{ p.progLang | join: ", " }}</span>{% endif %}
+          {% if p.license %}<span class="license">{% fa_svg fas.fa-file-lines %} {{ p.license }}</span>{% endif %}
+          {% if p.progLang %}<span class="prog-lang">{% fa_svg fas.fa-code %} {{ p.progLang | join: ", " }}</span>{% endif %}
           {% if p.authorNPub %}
             <span class="author">
-              👤 by <a href="https://snort.social/p/{{ p.authorNPub }}" target="_blank" rel="noopener noreferrer">
+              {% fa_svg fas.fa-user %} by <a href="https://snort.social/p/{{ p.authorNPub }}" target="_blank" rel="noopener noreferrer">
                 <img class="avatar" src="/images/nostrich.webp" alt="Author avatar">
                 Author
               </a>

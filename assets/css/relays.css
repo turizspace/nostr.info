@@ -1010,6 +1010,12 @@
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   position: relative;
+  /* Prevent scroll reset */
+  scroll-behavior: auto;
+  /* Improve scroll performance */
+  will-change: scroll-position;
+  /* Prevent layout shifts */
+  contain: layout;
 }
 
 /* Ensure table doesn't collapse */
@@ -1021,9 +1027,13 @@
 /* Better scroll behavior on mobile */
 @media (max-width: 768px) {
   .relay-table-wrapper {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
     scrollbar-width: thin;
     scrollbar-color: #3498db #f8f9fa;
+    /* Additional mobile optimizations */
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
   }
   
   .relay-table-wrapper::-webkit-scrollbar {
