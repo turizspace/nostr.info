@@ -156,6 +156,7 @@ const EVENT_KIND_INFO = {
 
 // Chart instances
 let eventKindsChart = null;
+let eventKindsBarChart = null;
 
 // Initialize on page load
 window.addEventListener('load', () => {
@@ -728,33 +729,43 @@ function updateTopRelays() {
     .filter(r => r.events > 0)
     .sort((a, b) => b.events - a.events)
     .slice(0, 10);
-  
-  const tbody = document.getElementById('top-relays-body');
-  if (!tbody) return;
-  
+
+  const grid = document.getElementById('top-relays-grid');
+  if (!grid) return;
+
   if (topRelays.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem">No relay activity yet. Waiting for events...</td></tr>';
+    grid.innerHTML = '<div class="loading" style="text-align:center;padding:2rem">No relay activity yet. Waiting for events...</div>';
     return;
   }
-  
-  tbody.innerHTML = topRelays.map((relay, idx) => {
+
+  grid.innerHTML = topRelays.map((relay) => {
     const avgLatency = relay.latencies.length > 0
       ? (relay.latencies.reduce((sum, l) => sum + l, 0) / relay.latencies.length).toFixed(0)
       : '-';
-    
+
     const status = relay.connected
-      ? '<span class="status-badge online">Online</span>'
-      : '<span class="status-badge offline">Offline</span>';
-    
+      ? `<span class="status-badge online">{% fa_svg fas.fa-circle-check %}</span>`
+      : `<span class="status-badge offline">{% fa_svg fas.fa-circle-xmark %}</span>`;
+
     return `
-      <tr>
-        <td>${idx + 1}</td>
-        <td><code>${relay.url}</code></td>
-        <td><strong>${relay.events}</strong></td>
-        <td>${relay.activeUsers.size}</td>
-        <td>${avgLatency}ms</td>
-        <td>${status}</td>
-      </tr>
+      <div class="relay-card modern-justify">
+        <div class="relay-card-row">
+          <div class="relay-url"><code>${relay.url}</code></div>
+          <div class="relay-status">${status}</div>
+        </div>
+        <div class="relay-card-row metrics-row">
+          <div class="relay-label-col">
+            <div class="relay-label">Events</div>
+            <div class="relay-label">Active Users</div>
+            <div class="relay-label">Avg Latency</div>
+          </div>
+          <div class="relay-value-col">
+            <div class="relay-value">${relay.events}</div>
+            <div class="relay-value">${relay.activeUsers.size}</div>
+            <div class="relay-value">${avgLatency}ms</div>
+          </div>
+        </div>
+      </div>
     `;
   }).join('');
 }
@@ -865,10 +876,73 @@ function initializeCharts() {
       }
     });
   }
+
+  // Event kinds bar chart
+  const kindsBarCanvas = document.getElementById('event-kinds-bar-chart');
+  if (kindsBarCanvas) {
+    eventKindsBarChart = new Chart(kindsBarCanvas, {
+      type: 'bar',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Event Count',
+          data: [],
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(54, 162, 235, 0.8)',
+            'rgba(255, 206, 86, 0.8)',
+            'rgba(75, 192, 192, 0.8)',
+            'rgba(153, 102, 255, 0.8)',
+            'rgba(255, 159, 64, 0.8)',
+            'rgba(199, 199, 199, 0.8)',
+            'rgba(83, 102, 255, 0.8)',
+            'rgba(255, 99, 255, 0.8)',
+            'rgba(99, 255, 132, 0.8)'
+          ],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        indexAxis: 'y', // horizontal bar chart
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed.x || context.parsed.y || 0;
+                return `${label}: ${value}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Count'
+            },
+            beginAtZero: true
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Event Kind'
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 function updateCharts() {
   updateKindsChart();
+  updateKindsBarChart();
 }
 
 function updateKindsChart() {
@@ -886,6 +960,23 @@ function updateKindsChart() {
   eventKindsChart.data.labels = labels;
   eventKindsChart.data.datasets[0].data = data;
   eventKindsChart.update('none');
+}
+
+function updateKindsBarChart() {
+  if (!eventKindsBarChart) return;
+
+  const sortedKinds = Object.entries(eventKindCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20); // Top 20 for bar chart
+
+  if (sortedKinds.length === 0) return;
+
+  const labels = sortedKinds.map(([kind, _]) => getKindInfo(parseInt(kind)).label);
+  const data = sortedKinds.map(([_, count]) => count);
+
+  eventKindsBarChart.data.labels = labels;
+  eventKindsBarChart.data.datasets[0].data = data;
+  eventKindsBarChart.update('none');
 }
 
 function updateTimeRange() {

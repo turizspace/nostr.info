@@ -171,56 +171,29 @@ permalink: /
 
   <!-- Event Kind Distribution -->
   <section class="stats-section">
-  <h2>{% fa_svg fas.fa-bullseye %} Event Kind Distribution</h2>
+    <h2>{% fa_svg fas.fa-bullseye %} Event Kind Distribution</h2>
     <div class="distribution-container">
-      <div class="chart-container chart-small">
+      <div class="chart-container chart-small" style="width:100%;max-width:400px;margin:auto;display:inline-block;vertical-align:top;">
         <canvas id="event-kinds-chart"></canvas>
+        <div style="text-align:center;color:#888;margin-top:0.5em;">
+          <small>Pie chart: Proportional breakdown of event kinds.</small>
+        </div>
       </div>
-      <div class="kinds-table-container">
-        <table class="kinds-distribution-table">
-          <thead>
-            <tr>
-              <th>Event Kind</th>
-              <th>Count</th>
-              <th>Percentage</th>
-              <th>Distribution</th>
-            </tr>
-          </thead>
-          <tbody id="kinds-table-body">
-            <tr>
-              <td colspan="4" style="text-align:center;padding:2rem">
-                <span class="loading">Loading event kinds...</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="chart-container chart-large" style="width:100%;max-width:700px;margin:auto;display:inline-block;vertical-align:top;">
+        <canvas id="event-kinds-bar-chart"></canvas>
+        <div style="text-align:center;color:#888;margin-top:0.5em;">
+          <small>Bar chart: Distribution of event kinds across the network.</small>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- Top Relays by Activity -->
   <section class="stats-section">
-  <h2>{% fa_svg fas.fa-trophy %} Top Relays by Activity</h2>
-    <div class="top-relays-container">
-      <table class="top-relays-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Relay URL</th>
-            <th>Events</th>
-            <th>Active Users</th>
-            <th>Avg Latency</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="top-relays-body">
-          <tr>
-            <td colspan="6" style="text-align:center;padding:2rem">
-              <span class="loading">Loading relay data...</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <h2>{% fa_svg fas.fa-trophy %} Top Relays by Activity</h2>
+    <div class="top-relays-grid" id="top-relays-grid">
+      <!-- Cards will be rendered here by statistics.js -->
+      <div class="loading" style="text-align:center;padding:2rem">Loading relay data...</div>
     </div>
   </section>
 
