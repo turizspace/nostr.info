@@ -10,43 +10,77 @@ function shuffle(array) {
   });
 }
 
+let relays = [];
+let discoveredRelays = new Map();
+
 window.addEventListener('load', () => {
-  window.relays = {{ site.data.relays.wss | jsonify }}.map(it=>{ return {
+  relays = {{ site.data.relays.wss | jsonify }}.map(it=>{ return {
     url: `wss://${it}`,
-    tried: -1, // we tried to connect it
-    connected: false, // currently connected
-    answered: false, // was connected in the past
-    events: 0, // event counter
-    wrongKind: 0, // count unexpected events
-    invalid: 0, // events with missing parts
+    tried: -1,
+    connected: false,
+    answered: false,
+    events: 0,
+    wrongKind: 0,
+    invalid: 0,
     msg: "",
-    latencies: [], // track request-response times
-    activeUsers: new Set(), // unique pubkeys seen
-    eventsByKind: {}, // count events by kind number
-    eventsList: [], // store actual events from this relay
-    connectedAt: null, // timestamp when connection established
-    firstEventAt: null, // timestamp of first event received
-    nip11: null // relay metadata from NIP-11
-  }})
-  shuffle(relays)
-  relays.forEach((r, id) => { setupWs(r, id) })
-  window.tab = document.getElementById("tab")
-  window.relayFilters = document.getElementById("relay-filters")
-  window.relayQualityFilter = document.getElementById("relay-filter")
-  window.activityFilter = document.getElementById("activity-filter")
-  window.uptimeFilter = document.getElementById("uptime-filter")
-  window.connectRelaysBtn = document.getElementById("connectNewRelays")
-  window.eventFilters = document.getElementById("event-filters")
-  window.kindFilter = document.getElementById("kind-filter")
-  window.pubkeyFilter = document.getElementById("pubkey-filter")
-  window.degreeFilter = document.getElementById("degree-filter")
-  window.output = document.getElementById("output")
-  window.expandedEvent = ""
-  
-  // Add scroll listeners to pause updates during scrolling
-  window.addEventListener('scroll', handleScrollStart, true) // Use capture to catch all scroll events
-  output.addEventListener('scroll', handleScrollStart)
-})
+    latencies: [],
+    activeUsers: new Set(),
+    eventsByKind: {},
+    eventsList: [],
+    connectedAt: null,
+    firstEventAt: null,
+    nip11: null,
+    isDiscovered: false
+  }});
+  relays.forEach(relay => discoveredRelays.set(relay.url, relay));
+  shuffle(relays);
+  relays.forEach((r, id) => { setupWs(r, id) });
+  window.tab = document.getElementById("tab");
+  window.relayFilters = document.getElementById("relay-filters");
+  window.relayQualityFilter = document.getElementById("relay-filter");
+  window.activityFilter = document.getElementById("activity-filter");
+  window.uptimeFilter = document.getElementById("uptime-filter");
+  window.connectRelaysBtn = document.getElementById("connectNewRelays");
+  window.eventFilters = document.getElementById("event-filters");
+  window.kindFilter = document.getElementById("kind-filter");
+  window.pubkeyFilter = document.getElementById("pubkey-filter");
+  window.degreeFilter = document.getElementById("degree-filter");
+  window.output = document.getElementById("output");
+  window.expandedEvent = "";
+  window.addEventListener('scroll', handleScrollStart, true);
+  output.addEventListener('scroll', handleScrollStart);
+});
+
+function addDiscoveredRelay(url) {
+  url = url.trim().toLowerCase();
+  if (!url.startsWith('wss://')) return;
+  if (discoveredRelays.has(url)) {
+    const existingRelay = discoveredRelays.get(url);
+    if (!existingRelay.isDiscovered) existingRelay.isDiscovered = true;
+    return;
+  }
+  const newRelay = {
+    url,
+    tried: -1,
+    connected: false,
+    answered: false,
+    events: 0,
+    wrongKind: 0,
+    invalid: 0,
+    msg: "",
+    latencies: [],
+    activeUsers: new Set(),
+    eventsByKind: {},
+    eventsList: [],
+    connectedAt: null,
+    firstEventAt: null,
+    nip11: null,
+    isDiscovered: true
+  };
+  discoveredRelays.set(url, newRelay);
+  relays.push(newRelay);
+  setupWs(newRelay, relays.length - 1);
+}
 
 const LIMIT = 100 // how many events to show
 const throttleMs = 500
@@ -156,17 +190,17 @@ function connectRelays() {
 }
 
 function relaysTable() {
-  connectRelaysBtn.hidden = relays.filter(it=>it.tried<0).length === 0
-  return '<div class="relay-table-wrapper"><table class="relay-table">' +
-    '<thead><tr>' +
-    '<th>Relay URL</th>' +
-    '<th>Events<sup>1</sup></th>' +
-    '<th>Active Users</th>' +
-    '<th>Avg Latency</th>' +
-    '<th>Connected Time</th>' +
-    '<th>Status<sup>2</sup></th>' +
-    '<th>Information</th>' +
-    '</tr></thead><tbody>' +
+  connectRelaysBtn.hidden = relays.filter(it=>it.tried<0).length === 0;
+  return `<div class="relay-table-wrapper" style="overflow-x:auto;max-width:100vw;">
+    <table class="relay-table" style="width:100%;min-width:600px;table-layout:fixed;">
+      <thead><tr>
+        <th style="width:28%;word-break:break-all;overflow-wrap:anywhere;">Relay URL</th>
+        <th style="width:12%">Events<sup>1</sup></th>
+        <th style="width:12%">Active Users</th>
+        <th style="width:12%">Avg Latency</th>
+        <th style="width:12%">Connected Time</th>
+        <th style="width:12%">Status<sup>2</sup></th>
+      </tr></thead><tbody>` +
     relays.filter(r=>{
       // Performance filter
       let passesPerformance = false
@@ -223,19 +257,13 @@ function relaysTable() {
       
       const activeUsers = r.activeUsers.size;
       
-      const info = [];
-      if (r.wrongKind > 0) info.push(`${r.wrongKind} unrequested events`);
-      if (r.invalid > 0) info.push(`${r.invalid} invalid events`);
-      if (r.msg.length > 0) info.push(r.msg);
-      
       return `<tr class="relay-row" onclick="showRelayDetails(${originalIdx})" style="cursor:pointer">
-        <td><code>${r.url}</code></td>
+        <td style="max-width:320px;word-break:break-all;overflow-wrap:anywhere;"><code>${r.url}</code></td>
         <td>${r.events > 0 ? `<strong>${r.events}</strong>` : '0'}</td>
         <td>${activeUsers > 0 ? activeUsers : '-'}</td>
         <td>${avgLatency}</td>
         <td>${connectedTime}</td>
         <td>${status}</td>
-        <td>${info.join('<br>')}</td>
       </tr>`;
     }).join('') +
         `</tbody><tfoot>
@@ -429,20 +457,21 @@ function formatTags(tags) {
 }
 
 function eventBadge(event) {
-  const degree = pubkeyFilter.value ? `<span class="degree-badge">D=${event.degree}</span> ` : ''
-  const from = nameFromPubkey(event.pubkey)
+  const degree = pubkeyFilter.value ? `<span class="degree-badge">D=${event.degree}</span> ` : '';
+  const pubkey = event.pubkey || '';
+  const profile = meta[pubkey] || {};
+  const profileName = profile.name ? escapeHTML(profile.name) : pubkey.substring(0, 8);
+  const profilePic = profile.picture ? `<img src="${escapeHTML(profile.picture)}" alt="profile" style="width:32px;height:32px;border-radius:50%;margin-right:0.5em;vertical-align:middle">` : '';
   const expandCollapse = (event.id === expandedEvent)
     ? `<span class='collapse' onclick='setExpand("")'>▼ </span>`
-    : `<span class='expand' onclick='setExpand("${event.id}")'>▶ </span>`
-  
-  const kindBadge = `<span class="kind-badge kind-${event.kind}" title="${getKindName(event.kind)}">${event.kind}</span>`
-  const timestamp = `<span class="event-time">${timeFormat(event.created_at)}</span>`
-  
+    : `<span class='expand' onclick='setExpand("${event.id}")'>▶ </span>`;
+  const kindBadge = `<span class="kind-badge kind-${event.kind}" title="${getKindName(event.kind)}">${event.kind}</span>`;
+  const timestamp = `<span class="event-time">${timeFormat(event.created_at)}</span>`;
   var badge = `<div class="event-card kind-${event.kind}">
-    <div class="event-header">
-      ${expandCollapse}${kindBadge} ${timestamp} ${degree}${from}
+    <div class="event-header" style="display:flex;align-items:center;gap:0.5em;">
+      ${expandCollapse}${kindBadge} ${timestamp} ${degree}${profilePic}<span style="font-weight:600">${profileName}</span>
     </div>
-    <div class="event-body">`
+    <div class="event-body">`;
     
   switch (event.kind) {
     case 0: {
@@ -662,14 +691,20 @@ function testNip11(relay) {
     }
   }).then(it => {
     it.json().then(it => {
-      relay.nip11=it
-      console.log(it)
-    }).catch(console.error)
-  }).catch(console.error)
+      relay.nip11 = it
+      // Optionally, set a flag for UI if needed
+    }).catch(err => {
+      relay.nip11 = null
+      if (window.location.search.includes('debug')) console.warn('NIP-11 JSON parse error:', err)
+    })
+  }).catch(err => {
+    relay.nip11 = null
+    if (window.location.search.includes('debug')) console.warn('NIP-11 fetch error:', err)
+  })
 }
 
 function setupWs(relay, id) {
-  // testNip11(relay)
+  testNip11(relay)
   const ws = new WebSocket(relay.url)
   relay.ws = ws
   relay.tried = ts()
@@ -750,38 +785,13 @@ function setupWs(relay, id) {
           break
         case 'relays':
           if (event.kind === 2) {
-            const ipRegExp = /[0-9]+.[0-9]+.[0-9]+.[0-9]+/g
-            const relayUrl = event
-              .content
-              .replace(/(\n|\r|\t|\/| )+$/, '')
-              .replace(/^(\n|\r|\t| )+/, '')
-              .toLowerCase()
-            if (relays.findIndex(it=>it.url==relayUrl)>=0 || // we have this one already.
-                !relayUrl.startsWith('wss://') || // only ssl for now
-                ipRegExp.test(relayUrl) || // IPs don't support ssl
-                relayUrl.includes('localhost')) { // localhost?
-              break
-            }
-            relays.push({
-              url: relayUrl,
-              tried: -1,
-              connected: false,
-              answered: false,
-              events: 0,
-              wrongKind: 0,
-              invalid: 0,
-              msg: "",
-              latencies: [],
-              activeUsers: new Set(),
-              eventsByKind: {},
-              eventsList: [],
-              connectedAt: null,
-              firstEventAt: null,
-              nip11: null
-            })
+            const ipRegExp = /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/g;
+            let relayUrl = event.content.replace(/(\n|\r|\t|\/| )+$/, '').replace(/^(\n|\r|\t| )+/, '').toLowerCase();
+            if (relayUrl.includes('localhost') || ipRegExp.test(relayUrl)) break;
+            addDiscoveredRelay(relayUrl);
           } else {
-            relay.wrongKind++
-            relay.msg = msg.data
+            relay.wrongKind++;
+            relay.msg = msg.data;
           }
           break
         case 'main':
@@ -896,8 +906,29 @@ function showRelayDetails(idx, selectedKind = null) {
     <div id="relay-modal" onclick="closeRelayModal(event)">
       <div class="modal-content" onclick="event.stopPropagation()">
         <span class="close" onclick="closeRelayModal()">&times;</span>
+        ${relay.nip11 ? `
+          <div class="nip11-info modern-modal" style="margin-bottom:2em;">
+            ${relay.nip11.banner ? `<div class="nip11-banner"><img src="${escapeHTML(relay.nip11.banner)}" alt="Relay Banner" style="max-width:100%;border-radius:8px;margin-bottom:1em"></div>` : '<div class="nip11-banner" style="height:40px;background:#eee;border-radius:8px;margin-bottom:1em;text-align:center;line-height:40px;color:#aaa">No banner</div>'}
+            <div style="display:flex;align-items:center;gap:1em;margin-bottom:1em">
+              ${relay.nip11.icon ? `<img src="${escapeHTML(relay.nip11.icon)}" alt="Relay Icon" class="nip11-icon" style="width:48px;height:48px;border-radius:50%;">` : '<span class="nip11-icon" style="width:48px;height:48px;display:inline-block;background:#eee;border-radius:50%;text-align:center;line-height:48px;color:#aaa">No icon</span>'}
+              <div>
+                <div style="font-size:1.3em;font-weight:600;">${relay.nip11.name ? escapeHTML(relay.nip11.name) : '<span style="color:#aaa">Unknown</span>'}</div>
+                ${relay.nip11.software ? `<div style="font-size:0.95em;color:#666">${escapeHTML(relay.nip11.software)}</div>` : ''}
+                ${relay.nip11.version ? `<div style="font-size:0.95em;color:#666">v${escapeHTML(relay.nip11.version)}</div>` : ''}
+              </div>
+            </div>
+            ${relay.nip11.description ? `<div style="margin-bottom:1em;color:#444">${escapeHTML(relay.nip11.description)}</div>` : ''}
+            ${relay.nip11.pubkey ? `<div style="margin-bottom:0.5em"><strong>Pubkey:</strong> <code>${escapeHTML(relay.nip11.pubkey)}</code></div>` : ''}
+            ${relay.nip11.contact ? `<div style="margin-bottom:0.5em"><strong>Contact:</strong> <a href="${escapeHTML(relay.nip11.contact)}" target="_blank">${escapeHTML(relay.nip11.contact)}</a></div>` : ''}
+            ${relay.nip11.limitation ? `<div style="margin-bottom:0.5em"><strong>Limitations:</strong><ul style='margin:0.5em 0 0 1em;padding:0;list-style:disc;'>${Object.entries(relay.nip11.limitation).map(([k,v]) => `<li><span style='font-weight:500'>${escapeHTML(k)}</span>: <span style='color:#007bff'>${escapeHTML(String(v))}</span></li>`).join('')}</ul></div>` : ''}
+            ${relay.nip11.retention ? `<div style="margin-bottom:0.5em"><strong>Retention:</strong> <code>${escapeHTML(JSON.stringify(relay.nip11.retention,null,2))}</code></div>` : ''}
+            ${relay.nip11.payment_url ? `<div style="margin-bottom:0.5em"><strong>Payment URL:</strong> <a href="${escapeHTML(relay.nip11.payment_url)}" target="_blank">${escapeHTML(relay.nip11.payment_url)}</a></div>` : ''}
+            ${relay.nip11.bolt11 ? `<div style="margin-bottom:0.5em"><strong>Payment (bolt11):</strong> <code>${escapeHTML(relay.nip11.bolt11)}</code></div>` : ''}
+            ${relay.nip11.supported_nips ? `<div style="margin-bottom:0.5em"><strong>Supported NIPs:</strong> <span class="nip11-nips">${relay.nip11.supported_nips.map(nip => `<span class="nip-badge">NIP-${nip}</span>`).join(' ')}</span></div>` : ''}
+            <details style="margin-top:1em"><summary>Raw NIP-11 JSON</summary><pre style="background:#f8f9fa;border-radius:6px;padding:8px;font-size:12px;overflow-x:auto">${escapeHTML(JSON.stringify(relay.nip11,null,2))}</pre></details>
+          </div>
+        ` : ''}
         <h2>${relay.url}</h2>
-        
         <div class="relay-stats">
           <div class="stat-item">
             <div class="stat-label">Status</div>
@@ -922,7 +953,6 @@ function showRelayDetails(idx, selectedKind = null) {
             <div class="stat-value">${relay.connectedAt ? formatDuration(ts() - relay.connectedAt) : 'N/A'}</div>
           </div>
         </div>
-        
         <h3>Event Kinds Breakdown <small style="color:#6c757d">(Click to view events)</small></h3>
         <div class="kinds-table-container">
           <table class="kinds-table">
@@ -932,17 +962,6 @@ function showRelayDetails(idx, selectedKind = null) {
             </tbody>
           </table>
         </div>
-        
-        ${relay.nip11 ? `
-          <h3>Relay Information (NIP-11)</h3>
-          <div class="nip11-info">
-            ${relay.nip11.name ? `<p><strong>Name:</strong> ${escapeHTML(relay.nip11.name)}</p>` : ''}
-            ${relay.nip11.description ? `<p><strong>Description:</strong> ${escapeHTML(relay.nip11.description)}</p>` : ''}
-            ${relay.nip11.pubkey ? `<p><strong>Contact:</strong> ${escapeHTML(relay.nip11.pubkey)}</p>` : ''}
-            ${relay.nip11.contact ? `<p><strong>Contact:</strong> ${escapeHTML(relay.nip11.contact)}</p>` : ''}
-            ${relay.nip11.supported_nips ? `<p><strong>Supported NIPs:</strong> ${relay.nip11.supported_nips.join(', ')}</p>` : ''}
-          </div>
-        ` : ''}
       </div>
     </div>
   `
@@ -963,30 +982,46 @@ function showRelayEventsByKind(idx, kind) {
   // Filter events by kind
   const eventsOfKind = (relay.eventsList || []).filter(e => e.kind === kindInt)
   
+  let infoMsg = '';
+  if (eventsOfKind.length === 0) {
+    infoMsg = '<p style="text-align:center;color:#6c757d;padding:2rem">No events of this kind found</p>';
+  } else if (relay.eventsByKind && relay.eventsByKind[kind]) {
+    if (relay.eventsByKind[kind] > 0 && eventsOfKind.length === 0) {
+      infoMsg = `<p style="text-align:center;color:#d9534f;padding:1rem">${relay.eventsByKind[kind]} events of this kind were tallied, but none are available to show. Only the most recent events are stored.</p>`;
+    } else if (relay.eventsByKind[kind] > eventsOfKind.length) {
+      infoMsg = `<p style="text-align:center;color:#888;padding:0.5rem">Showing the most recent ${eventsOfKind.length} of ${relay.eventsByKind[kind]} events.</p>`;
+    }
+  }
   const eventsHtml = eventsOfKind.length > 0
-    ? eventsOfKind.slice(0, 20).map(event => {
-        const shortId = event.id ? event.id.substring(0, 8) : 'unknown'
-        const timestamp = timeFormat(event.created_at)
-        const pubkeyShort = event.pubkey ? event.pubkey.substring(0, 8) : 'unknown'
+    ? infoMsg + eventsOfKind.slice(0, 20).map(event => {
+        const shortId = event.id ? event.id.substring(0, 8) : 'unknown';
+        const timestamp = timeFormat(event.created_at);
+        const pubkey = event.pubkey || '';
+        const pubkeyShort = pubkey.substring(0, 8);
+        // Try to get metadata for pubkey
+        const profile = meta[pubkey] || {};
+        const profileName = profile.name ? escapeHTML(profile.name) : pubkeyShort;
+        const profilePic = profile.picture ? `<img src="${escapeHTML(profile.picture)}" alt="profile" style="width:32px;height:32px;border-radius:50%;margin-right:0.5em;vertical-align:middle">` : '';
         const contentPreview = event.content.length > 100 
           ? escapeHTML(event.content.substring(0, 100)) + '...'
-          : escapeHTML(event.content)
-        
+          : escapeHTML(event.content);
+        const tagsHtml = event.tags && event.tags.length > 0
+          ? `<div class="event-tags-preview">Tags: ${event.tags.map(tag => `<span class="event-tag" style="background:#eee;border-radius:4px;padding:2px 6px;margin:2px;display:inline-block;font-size:0.95em">${escapeHTML(tag.join(':'))}</span>`).join(' ')}</div>`
+          : '';
         return `
-          <div class="relay-event-card">
-            <div class="event-meta">
-              <span class="event-id" title="${event.id}">ID: ${shortId}...</span>
-              <span class="event-timestamp">${timestamp}</span>
+          <div class="relay-event-card" style="margin-bottom:1em;padding:1em;border-radius:8px;background:#fafbfc;box-shadow:0 1px 4px rgba(0,0,0,0.04)">
+            <div class="event-meta" style="display:flex;align-items:center;gap:0.5em;margin-bottom:0.5em">
+              ${profilePic}
+              <span class="event-pubkey" title="${event.pubkey}" style="font-weight:600">${profileName}</span>
+              <span class="event-timestamp" style="margin-left:auto;color:#888">${timestamp}</span>
             </div>
-            <div class="event-meta">
-              <span class="event-pubkey" title="${event.pubkey}">From: ${pubkeyShort}...</span>
-            </div>
-            ${event.content ? `<div class="event-content-preview">${contentPreview}</div>` : ''}
-            ${event.tags && event.tags.length > 0 ? `<div class="event-tags-preview">${event.tags.length} tags</div>` : ''}
+            <!-- ID hidden for cleaner look -->
+            ${event.content ? `<div class="event-content-preview" style="margin-bottom:0.5em;color:#333">${contentPreview}</div>` : ''}
+            ${tagsHtml}
           </div>
-        `
+        `;
       }).join('')
-    : '<p style="text-align:center;color:#6c757d;padding:2rem">No events of this kind found</p>'
+    : infoMsg;
   
   const modalHtml = `
     <div id="relay-modal" onclick="closeRelayModal(event)">

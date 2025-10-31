@@ -205,22 +205,118 @@ function createRelayObject(url) {
   };
 }
 
+const MAX_CONCURRENT_RELAYS = 20;
+let relayQueue = [];
+let activeRelayCount = 0;
+
 function connectToRelays() {
   const statusEl = document.getElementById('connection-status');
   if (statusEl) {
     statusEl.innerHTML = `<div class="status-message">Connecting to ${relays.length} relays...</div>`;
   }
-  
-  // Connect to a subset of relays initially (to avoid overwhelming the browser)
-  const initialCount = Math.min(20, relays.length);
-  for (let i = 0; i < initialCount; i++) {
-    setTimeout(() => setupWebSocket(relays[i], i), i * 100);
+  relayQueue = relays.map((r, i) => ({ relay: r, index: i }));
+  activeRelayCount = 0;
+  startRelayPool();
+}
+
+function startRelayPool() {
+  while (activeRelayCount < MAX_CONCURRENT_RELAYS && relayQueue.length > 0) {
+    const { relay, index } = relayQueue.shift();
+    activeRelayCount++;
+    setupWebSocketWithPool(relay, index);
   }
-  
-  // Connect to remaining relays gradually
-  for (let i = initialCount; i < relays.length; i++) {
-    setTimeout(() => setupWebSocket(relays[i], i), initialCount * 100 + (i - initialCount) * 500);
+}
+
+function setupWebSocketWithPool(relay, index) {
+  if (relay.tried) {
+    activeRelayCount--;
+    startRelayPool();
+    return;
   }
+  relay.tried = true;
+  const ws = new WebSocket(relay.url);
+  relay.ws = ws;
+  const reqSentAt = {};
+  ws.onopen = () => {
+    relay.connected = true;
+    relay.answered = true;
+    relay.connectedAt = Date.now();
+    console.log(`Connected to ${relay.url}`);
+    // ...existing code...
+    const now = Math.floor(Date.now() / 1000);
+    const since = now - Math.floor(timeRangeMs / 1000);
+    reqSentAt['main'] = Date.now();
+    ws.send(JSON.stringify(["REQ", "stats-main", {
+      "limit": LIMIT,
+      "since": since,
+      "until": now + 3600
+    }]));
+    reqSentAt['meta'] = Date.now();
+    ws.send(JSON.stringify(["REQ", "stats-meta", {"kinds": [0], "limit": 100}]));
+    updateConnectionStatus();
+  };
+  ws.onmessage = (msg) => {
+    // ...existing code...
+    try {
+      const data = JSON.parse(msg.data);
+      if (data[0] === 'EVENT') {
+        const subscriptionId = data[1];
+        const event = data[2];
+        if (reqSentAt[subscriptionId.replace('stats-', '')]) {
+          const latency = Date.now() - reqSentAt[subscriptionId.replace('stats-', '')];
+          relay.latencies.push(latency);
+          if (relay.latencies.length > 100) {
+            relay.latencies.shift();
+          }
+        }
+        if (event.kind === 10002 && subscriptionId === 'stats-relay-lists') {
+          processRelayListEvent(event);
+        }
+        if (subscriptionId === 'stats-main' && event.kind !== 0 && event.kind !== 3) {
+          relay.events++;
+          relay.eventsList.push(event);
+          if (!relay.eventsByKind[event.kind]) {
+            relay.eventsByKind[event.kind] = 0;
+          }
+          relay.eventsByKind[event.kind]++;
+          if (!eventKindCounts[event.kind]) {
+            eventKindCounts[event.kind] = 0;
+          }
+          eventKindCounts[event.kind]++;
+          if (event.pubkey) {
+            relay.activeUsers.add(event.pubkey);
+            activeUsersPubkeys.add(event.pubkey);
+          }
+          if (!allEvents.find(e => e.id === event.id)) {
+            event.receivedAt = Date.now();
+            event.relayUrl = relay.url;
+            allEvents.push(event);
+          }
+        }
+      } else if (data[0] === 'EOSE') {
+        const subscriptionId = data[1];
+        ws.send(JSON.stringify(["CLOSE", subscriptionId]));
+      }
+    } catch (e) {
+      console.error(`Error processing message from ${relay.url}:`, e);
+    }
+  };
+  ws.onclose = () => {
+    relay.connected = false;
+    console.log(`Disconnected from ${relay.url}`);
+    updateConnectionStatus();
+    activeRelayCount--;
+    startRelayPool();
+  };
+  ws.onerror = (e) => {
+    relay.connected = false;
+    relay.disconnectedAt = Date.now();
+    console.error(`Error with ${relay.url}:`, e);
+    updateConnectionStatus();
+    updateRelayReliability(relay);
+    activeRelayCount--;
+    startRelayPool();
+  };
 }
 
 function setupWebSocket(relay, index) {
