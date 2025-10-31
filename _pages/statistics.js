@@ -38,9 +38,10 @@ let relayDiscoveryInProgress = false;
 let discoveredRelayCount = 0;
 
 const ICON_CONNECTED = `{% fa_svg fas.fa-circle-check %}`;
-const ICON_SUCCESS = `{% fa_svg fas.fa-gauge-high %}`;
+// Use icons that are present in the site's FA set to avoid missing icons at runtime
+const ICON_SUCCESS = `{% fa_svg fas.fa-chart-line %}`; // replaced fa-gauge-high
 const ICON_CURATED = `{% fa_svg fas.fa-clipboard-list %}`;
-const ICON_DISCOVERED = `{% fa_svg fas.fa-compass %}`;
+const ICON_DISCOVERED = `{% fa_svg fas.fa-magnifying-glass %}`; // replaced fa-compass
 
 const NIP_BASE_URL = 'https://github.com/nostr-protocol/nips/blob/master/';
 const EVENT_KIND_INFO = {
