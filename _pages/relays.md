@@ -6,6 +6,7 @@ permalink: /relays/
 
 <link rel="stylesheet" href="/assets/css/main.css">
 <link rel="stylesheet" href="/assets/css/relays.css">
+<link rel="stylesheet" href="/assets/css/relays-grid.css">
 <script src="/js/relays.js"></script>
 
 <div class="relays-container">
@@ -17,90 +18,94 @@ permalink: /relays/
     </select>
 
     <div id="relay-filters">
-      <div class="filter-group">
-        <label for="relay-filter">Filter by Relay Performance:</label>
-        <select name="relay-filter" id="relay-filter" class="filter-select" onchange="setDirty()">
-          <option value="sentConnected">🌟 High Performance (Many Events, Stable)</option>
-          <option value="sentMany">📈 High Volume (Many Events)</option>
-          <option value="sent">✉️ Active (Sent Events)</option>
-          <option value="didConnect" selected>🔌 Connected (WebSocket Active)</option>
-          <option value="all">📋 All Relays</option>
-        </select>
-      </div>
-      
-      <div class="filter-group">
-        <label for="activity-filter">Activity Level:</label>
-        <select name="activity-filter" id="activity-filter" class="filter-select" onchange="setDirty()">
-          <option value="all" selected>All Activity Levels</option>
-          <option value="high">High (100+ events)</option>
-          <option value="medium">Medium (10-99 events)</option>
-          <option value="low">Low (1-9 events)</option>
-          <option value="none">No Activity</option>
-        </select>
-      </div>
-      
-      <div class="filter-group">
-        <label for="uptime-filter">Uptime:</label>
-        <select name="uptime-filter" id="uptime-filter" class="filter-select" onchange="setDirty()">
-          <option value="all" selected>All Uptimes</option>
-          <option value="connected">Currently Connected</option>
-          <option value="disconnected">Currently Disconnected</option>
-          <option value="never">Never Connected</option>
-        </select>
+      <div class="filters-row">
+        <div class="filter-item">
+          <label for="relay-filter">{% fa_svg fas.fa-filter %} Performance</label>
+          <select name="relay-filter" id="relay-filter" class="filter-select" onchange="setDirty()">
+            <option value="sentConnected">{% fa_svg fas.fa-star %} High Performance</option>
+            <option value="sentMany">{% fa_svg fas.fa-chart-line %} High Volume</option>
+            <option value="sent">{% fa_svg fas.fa-paper-plane %} Active</option>
+            <option value="didConnect" selected>{% fa_svg fas.fa-plug %} Connected</option>
+            <option value="all">{% fa_svg fas.fa-list %} All Relays</option>
+          </select>
+        </div>
+        
+        <div class="filter-item">
+          <label for="activity-filter">{% fa_svg fas.fa-chart-bar %} Activity</label>
+          <select name="activity-filter" id="activity-filter" class="filter-select" onchange="setDirty()">
+            <option value="all" selected>All Levels</option>
+            <option value="high">{% fa_svg fas.fa-fire %} High (100+)</option>
+            <option value="medium">{% fa_svg fas.fa-bolt %} Medium (10-99)</option>
+            <option value="low">{% fa_svg fas.fa-seedling %} Low (1-9)</option>
+            <option value="none">{% fa_svg fas.fa-circle-xmark %} None</option>
+          </select>
+        </div>
+        
+        <div class="filter-item">
+          <label for="uptime-filter">{% fa_svg fas.fa-signal %} Uptime</label>
+          <select name="uptime-filter" id="uptime-filter" class="filter-select" onchange="setDirty()">
+            <option value="all" selected>All Uptimes</option>
+            <option value="connected">{% fa_svg fas.fa-circle-check %} Connected</option>
+            <option value="disconnected">{% fa_svg fas.fa-circle-xmark %} Disconnected</option>
+            <option value="never">{% fa_svg fas.fa-ban %} Never Connected</option>
+          </select>
+        </div>
       </div>
       
       <button id="connectNewRelays" class="connect-button" onclick="connectRelays()">
-        🔄 Connect New Relays
+        {% fa_svg fas.fa-arrows-rotate %} Connect New Relays
       </button>
     </div>
     <div id="event-filters">
-      <div class="filter-group">
-        <label for="kind-filter">Event Type:</label>
-        <select name="kind-filter" id="kind-filter" class="filter-select" onchange="setDirty()">
-          <option value="all">📋 All Event Types</option>
-          <option value="unknown">❓ Unhandled Types</option>
-          <option value="0">👤 Metadata</option>
-          <option value="1">📝 Public Post</option>
-          <option value="2">📡 Relay Recommendation</option>
-          <option value="3">👥 Follows List</option>
-          <option value="4">✉️ Direct Message</option>
-          <option value="5">🗑️ Deletions</option>
-          <option value="6">🔄 Quoted Boost</option>
-          <option value="7">👍 Reactions</option>
-          <option value="30">♟️ Chess</option>
-          <option value="40">📢 Channel Created</option>
-          <option value="41">📝 Channel Update</option>
-          <option value="42">💬 Channel Message</option>
-          <option value="43">🚫 Hide Message</option>
-          <option value="44">🔇 Mute User</option>
-          <option value="60">🚗 Ride Sharing</option>
-        </select>
-      </div>
+      <div class="filters-row">
+        <div class="filter-item">
+          <label for="kind-filter">{% fa_svg fas.fa-shapes %} Event Type</label>
+          <select name="kind-filter" id="kind-filter" class="filter-select" onchange="setDirty()">
+            <option value="all">{% fa_svg fas.fa-list %} All Types</option>
+            <option value="unknown">{% fa_svg fas.fa-circle-question %} Unhandled</option>
+            <option value="0">{% fa_svg fas.fa-user %} Metadata</option>
+            <option value="1">{% fa_svg fas.fa-comment %} Public Post</option>
+            <option value="2">{% fa_svg fas.fa-tower-broadcast %} Relay Rec</option>
+            <option value="3">{% fa_svg fas.fa-users %} Follows</option>
+            <option value="4">{% fa_svg fas.fa-envelope %} DM</option>
+            <option value="5">{% fa_svg fas.fa-trash %} Deletions</option>
+            <option value="6">{% fa_svg fas.fa-retweet %} Boost</option>
+            <option value="7">{% fa_svg fas.fa-heart %} Reactions</option>
+            <option value="30">{% fa_svg fas.fa-chess %} Chess</option>
+            <option value="40">{% fa_svg fas.fa-bullhorn %} Channel Create</option>
+            <option value="41">{% fa_svg fas.fa-pen %} Channel Update</option>
+            <option value="42">{% fa_svg fas.fa-comments %} Channel Msg</option>
+            <option value="43">{% fa_svg fas.fa-eye-slash %} Hide</option>
+            <option value="44">{% fa_svg fas.fa-volume-xmark %} Mute</option>
+            <option value="60">{% fa_svg fas.fa-car %} Ride Share</option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label for="pubkey-filter">Public Key Filter:</label>
-        <input type="text" 
-               name="pubkey-filter" 
-               id="pubkey-filter" 
-               class="filter-input" 
-               placeholder="Enter public key..." 
-               onchange="setDirty()">
-      </div>
+        <div class="filter-item filter-item-wide">
+          <label for="pubkey-filter">{% fa_svg fas.fa-key %} Public Key</label>
+          <input type="text" 
+                 name="pubkey-filter" 
+                 id="pubkey-filter" 
+                 class="filter-input" 
+                 placeholder="Enter public key (hex or npub)..." 
+                 onchange="setDirty()">
+        </div>
 
-      <div class="filter-group">
-        <label for="degree-filter">Connection Depth:</label>
-        <select name="degree-filter" 
-                id="degree-filter" 
-                class="filter-select" 
-                disabled 
-                onchange="setDirty()">
-          <option value="0">🎯 Direct Match Only</option>
-          <option value="1">👥 Direct Follows</option>
-          <option value="2">🌐 Second Degree</option>
-          <option value="3">🔄 Third Degree</option>
-          <option value="4">📈 Fourth Degree</option>
-          <option value="5">🌍 Fifth Degree</option>
-        </select>
+        <div class="filter-item">
+          <label for="degree-filter">{% fa_svg fas.fa-diagram-project %} Depth</label>
+          <select name="degree-filter" 
+                  id="degree-filter" 
+                  class="filter-select" 
+                  disabled 
+                  onchange="setDirty()">
+            <option value="0">{% fa_svg fas.fa-bullseye %} Direct</option>
+            <option value="1">{% fa_svg fas.fa-user-group %} 1st Degree</option>
+            <option value="2">{% fa_svg fas.fa-share-nodes %} 2nd Degree</option>
+            <option value="3">{% fa_svg fas.fa-sitemap %} 3rd Degree</option>
+            <option value="4">{% fa_svg fas.fa-network-wired %} 4th Degree</option>
+            <option value="5">{% fa_svg fas.fa-globe %} 5th Degree</option>
+          </select>
+        </div>
       </div>
     </div>
 <br>

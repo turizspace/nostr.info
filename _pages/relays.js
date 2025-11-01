@@ -191,92 +191,97 @@ function connectRelays() {
 
 function relaysTable() {
   connectRelaysBtn.hidden = relays.filter(it=>it.tried<0).length === 0;
-  return `<div class="relay-table-wrapper" style="overflow-x:auto;max-width:100vw;">
-    <table class="relay-table" style="width:100%;min-width:600px;table-layout:fixed;">
-      <thead><tr>
-        <th style="width:28%;word-break:break-all;overflow-wrap:anywhere;">Relay URL</th>
-        <th style="width:12%">Events<sup>1</sup></th>
-        <th style="width:12%">Active Users</th>
-        <th style="width:12%">Avg Latency</th>
-        <th style="width:12%">Connected Time</th>
-        <th style="width:12%">Status<sup>2</sup></th>
-      </tr></thead><tbody>` +
-    relays.filter(r=>{
-      // Performance filter
-      let passesPerformance = false
-      switch (relayQualityFilter.value) {
-        case 'all': passesPerformance = true; break
-        case 'didConnect': passesPerformance = r.answered; break
-        case 'sent': passesPerformance = r.events > 0; break
-        case 'sentMany': passesPerformance = r.events >= LIMIT; break
-        case 'sentConnected': passesPerformance = r.events >= LIMIT && r.connected; break
-        default: passesPerformance = false
+  
+  const filteredRelays = relays.filter(r=>{
+    // Performance filter
+    let passesPerformance = false
+    switch (relayQualityFilter.value) {
+      case 'all': passesPerformance = true; break
+      case 'didConnect': passesPerformance = r.answered; break
+      case 'sent': passesPerformance = r.events > 0; break
+      case 'sentMany': passesPerformance = r.events >= LIMIT; break
+      case 'sentConnected': passesPerformance = r.events >= LIMIT && r.connected; break
+      default: passesPerformance = false
+    }
+    
+    // Activity filter
+    let passesActivity = true
+    if (activityFilter && activityFilter.value !== 'all') {
+      switch (activityFilter.value) {
+        case 'high': passesActivity = r.events >= 100; break
+        case 'medium': passesActivity = r.events >= 10 && r.events < 100; break
+        case 'low': passesActivity = r.events >= 1 && r.events < 10; break
+        case 'none': passesActivity = r.events === 0; break
       }
-      
-      // Activity filter
-      let passesActivity = true
-      if (activityFilter && activityFilter.value !== 'all') {
-        switch (activityFilter.value) {
-          case 'high': passesActivity = r.events >= 100; break
-          case 'medium': passesActivity = r.events >= 10 && r.events < 100; break
-          case 'low': passesActivity = r.events >= 1 && r.events < 10; break
-          case 'none': passesActivity = r.events === 0; break
-        }
+    }
+    
+    // Uptime filter
+    let passesUptime = true
+    if (uptimeFilter && uptimeFilter.value !== 'all') {
+      switch (uptimeFilter.value) {
+        case 'connected': passesUptime = r.connected; break
+        case 'disconnected': passesUptime = !r.connected && r.answered; break
+        case 'never': passesUptime = !r.answered; break
       }
-      
-      // Uptime filter
-      let passesUptime = true
-      if (uptimeFilter && uptimeFilter.value !== 'all') {
-        switch (uptimeFilter.value) {
-          case 'connected': passesUptime = r.connected; break
-          case 'disconnected': passesUptime = !r.connected && r.answered; break
-          case 'never': passesUptime = !r.answered; break
-        }
-      }
-      
-      return passesPerformance && passesActivity && passesUptime
-    }).map((r, idx)=>{
-      // Find the original index in the relays array
-      const originalIdx = relays.findIndex(relay => relay.url === r.url)
-      
-      const status = r.tried < 0
-        ? '<span class="status pending">Pending</span>'
-        : r.connected
-          ? '<span class="status connected">Connected</span>'
-          : r.answered
-            ? '<span class="status disconnected">Disconnected</span>'
-            : '<span class="status disconnected">Failed</span>';
-      
-      const avgLatency = r.latencies.length > 0 
-        ? (r.latencies.reduce((sum, l) => sum + l, 0) / r.latencies.length).toFixed(0) + 'ms'
-        : '-';
-      
-      const connectedTime = r.connectedAt 
-        ? formatDuration(ts() - r.connectedAt)
-        : '-';
-      
-      const activeUsers = r.activeUsers.size;
-      
-      return `<tr class="relay-row" onclick="showRelayDetails(${originalIdx})" style="cursor:pointer">
-        <td style="max-width:320px;word-break:break-all;overflow-wrap:anywhere;"><code>${r.url}</code></td>
-        <td>${r.events > 0 ? `<strong>${r.events}</strong>` : '0'}</td>
-        <td>${activeUsers > 0 ? activeUsers : '-'}</td>
-        <td>${avgLatency}</td>
-        <td>${connectedTime}</td>
-        <td>${status}</td>
-      </tr>`;
-    }).join('') +
-        `</tbody><tfoot>
-          <tr><td colspan="7">
-            <sup>1</sup> Events count shows the number of events received after requesting ${LIMIT} most recent events. 
-            Events for metadata and follows are not included in this count.
-          </td></tr>
-          <tr><td colspan="7">
-            <sup>2</sup> Status indicates current connection state: 
-            Connected (active), Disconnected (lost connection), 
-            Failed (never connected), or Pending (not yet attempted).
-          </td></tr>
-        </tfoot></table></div>
+    }
+    
+    return passesPerformance && passesActivity && passesUptime
+  });
+  
+  const cardsHtml = filteredRelays.map((r, idx)=>{
+    // Find the original index in the relays array
+    const originalIdx = relays.findIndex(relay => relay.url === r.url)
+    
+    const statusIcon = r.tried < 0
+      ? `<span class="status-badge pending">{% fa_svg fas.fa-clock %}</span>`
+      : r.connected
+        ? `<span class="status-badge online">{% fa_svg fas.fa-circle-check %}</span>`
+        : r.answered
+          ? `<span class="status-badge offline">{% fa_svg fas.fa-circle-xmark %}</span>`
+          : `<span class="status-badge offline">{% fa_svg fas.fa-circle-xmark %}</span>`;
+    
+    const avgLatency = r.latencies.length > 0 
+      ? (r.latencies.reduce((sum, l) => sum + l, 0) / r.latencies.length).toFixed(0) + 'ms'
+      : '-';
+    
+    const connectedTime = r.connectedAt 
+      ? formatDuration(ts() - r.connectedAt)
+      : '-';
+    
+    const activeUsers = r.activeUsers.size;
+    
+    return `
+      <div class="relay-card modern-justify" onclick="showRelayDetails(${originalIdx})" style="cursor:pointer">
+        <div class="relay-card-row">
+          <div class="relay-url"><code>${r.url}</code></div>
+          <div class="relay-status">${statusIcon}</div>
+        </div>
+        <div class="relay-card-row metrics-row">
+          <div class="relay-label-col">
+            <div class="relay-label">Events</div>
+            <div class="relay-label">Active Users</div>
+            <div class="relay-label">Avg Latency</div>
+            <div class="relay-label">Connected Time</div>
+          </div>
+          <div class="relay-value-col">
+            <div class="relay-value">${r.events > 0 ? `<strong>${r.events}</strong>` : '0'}</div>
+            <div class="relay-value">${activeUsers > 0 ? activeUsers : '-'}</div>
+            <div class="relay-value">${avgLatency}</div>
+            <div class="relay-value">${connectedTime}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  return `
+    <div class="relays-grid">
+      ${cardsHtml}
+    </div>
+    <div class="relay-info-notes">
+      <p><sup>1</sup> Events count shows the number of events received after requesting ${LIMIT} most recent events. Events for metadata and follows are not included in this count.</p>
+      <p><sup>2</sup> Status indicates current connection state: Connected (active), Disconnected (lost connection), Failed (never connected), or Pending (not yet attempted).</p>
+    </div>
   <div style='margin:8px'>
     Total: ${relays.length} relays. ${relays.filter(r => r.connected).length} connected. ${relays.filter(r => r.events > 0).length} active.
   </div>`
