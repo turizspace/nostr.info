@@ -182,7 +182,7 @@ permalink: /
       <div class="chart-container chart-large" style="width:100%;max-width:700px;margin:auto;display:inline-block;vertical-align:top;">
         <canvas id="event-kinds-bar-chart"></canvas>
         <div style="text-align:center;color:#888;margin-top:0.5em;">
-    <small>Bar chart: Client software usage (derived from event tags and metadata).</small>
+    <small>Bar chart: Client software usage.</small>
         </div>
       </div>
     </div>
