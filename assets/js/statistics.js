@@ -25,6 +25,27 @@ function normalizeRelayUrl(url) {
   
   return url;
 }
+// Allow header search to filter visible relay cards and tables on statistics page
+window.applyStatisticsSearch = function(query){
+  try{
+    const q = (query || '').trim().toLowerCase();
+    // Filter relay cards if present
+    const cards = document.querySelectorAll('.relay-card, .relay-card-header, .top-relays-container .relay-card');
+    if(cards && cards.length){
+      cards.forEach(c=>{
+        const text = c.textContent || '';
+        c.style.display = q === '' || text.toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+      });
+    }
+    // Filter top-relays table rows if present
+    const rows = document.querySelectorAll('.top-relays-table tbody tr');
+    if(rows && rows.length){
+      rows.forEach(r=>{
+        r.style.display = q === '' || r.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+      });
+    }
+  }catch(e){ console.error('applyStatisticsSearch failed', e); }
+}
 
 // Global data storage
 let relays = [];

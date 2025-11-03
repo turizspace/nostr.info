@@ -100,6 +100,19 @@ function addDiscoveredRelay(url) {
   setupWs(newRelay, relays.length - 1);
 }
 
+// Expose a simple API so header search can call into relays filtering
+window.applyRelaySearch = function(query){
+  try{
+    window._relayTextFilter = (query || '').trim().toLowerCase();
+    // Re-render the table if already on relays view
+    if(document.querySelector('.relays-container')){
+      // support common output IDs used by the template
+      const output = document.getElementById('relays-output') || document.getElementById('output') || document.querySelector('.relays-container #output');
+      if(output) output.innerHTML = relaysTable();
+    }
+  }catch(e){ console.error('applyRelaySearch failed', e); }
+}
+
 const LIMIT = 100 // how many events to show
 const throttleMs = 500
 var received = []
@@ -211,7 +224,17 @@ function relaysTable() {
   connectRelaysBtn.hidden = relays.filter(it=>it.tried<0).length === 0;
   
   // Start with all relays; legacy performance/activity/uptime filters removed
+  // Allow text search filter from header via window._relayTextFilter
   let filteredRelays = relays.slice();
+  if(window._relayTextFilter && window._relayTextFilter.length){
+    const q = window._relayTextFilter.toLowerCase();
+    filteredRelays = filteredRelays.filter(r => {
+      const name = (r._static && r._static.name) ? String(r._static.name).toLowerCase() : '';
+      const url = r.url ? String(r.url).toLowerCase() : '';
+      const nip11 = r.nip11 ? JSON.stringify(r.nip11).toLowerCase() : '';
+      return name.indexOf(q) !== -1 || url.indexOf(q) !== -1 || nip11.indexOf(q) !== -1;
+    });
+  }
   
   // (text search removed per request)
 
