@@ -18,43 +18,32 @@ permalink: /relays/
     </select>
 
     <div id="relay-filters">
-      <div class="filters-row">
-        <div class="filter-item">
-          <label for="relay-filter">{% fa_svg fas.fa-filter %} Performance</label>
-          <select name="relay-filter" id="relay-filter" class="filter-select" onchange="setDirty()">
-            <option value="sentConnected">{% fa_svg fas.fa-star %} High Performance</option>
-            <option value="sentMany">{% fa_svg fas.fa-chart-line %} High Volume</option>
-            <option value="sent">{% fa_svg fas.fa-paper-plane %} Active</option>
-            <option value="didConnect" selected>{% fa_svg fas.fa-plug %} Connected</option>
-            <option value="all">{% fa_svg fas.fa-list %} All Relays</option>
-          </select>
-        </div>
-        
-        <div class="filter-item">
-          <label for="activity-filter">{% fa_svg fas.fa-chart-bar %} Activity</label>
-          <select name="activity-filter" id="activity-filter" class="filter-select" onchange="setDirty()">
-            <option value="all" selected>All Levels</option>
-            <option value="high">{% fa_svg fas.fa-fire %} High (100+)</option>
-            <option value="medium">{% fa_svg fas.fa-bolt %} Medium (10-99)</option>
-            <option value="low">{% fa_svg fas.fa-seedling %} Low (1-9)</option>
-            <option value="none">{% fa_svg fas.fa-circle-xmark %} None</option>
-          </select>
-        </div>
-        
-        <div class="filter-item">
-          <label for="uptime-filter">{% fa_svg fas.fa-signal %} Uptime</label>
-          <select name="uptime-filter" id="uptime-filter" class="filter-select" onchange="setDirty()">
-            <option value="all" selected>All Uptimes</option>
-            <option value="connected">{% fa_svg fas.fa-circle-check %} Connected</option>
-            <option value="disconnected">{% fa_svg fas.fa-circle-xmark %} Disconnected</option>
-            <option value="never">{% fa_svg fas.fa-ban %} Never Connected</option>
-          </select>
-        </div>
-      </div>
-      
       <button id="connectNewRelays" class="connect-button" onclick="connectRelays()">
         {% fa_svg fas.fa-arrows-rotate %} Connect New Relays
       </button>
+      <div class="filters-row" style="margin-top:0.75rem">
+        <div class="filter-item">
+          <label for="nip11-nips">{% fa_svg fas.fa-hashtag %} Supported NIPs</label>
+          <select id="nip11-nips" class="filter-select" onchange="setDirty()">
+            <option value="all" selected>Any NIP</option>
+            <!-- options populated dynamically by JS -->
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="relay-sort">{% fa_svg fas.fa-sort %} Sort</label>
+          <select id="relay-sort" class="filter-select" onchange="setDirty()">
+            <option value="default" selected>Default</option>
+            <option value="latency">Avg Latency</option>
+            <option value="activeUsers">Active Users</option>
+            <option value="payment_required">Payment Required</option>
+            <option value="auth_required">Auth Required</option>
+            <option value="max_limit">Max Limit</option>
+            <option value="max_subscriptions">Max Subscriptions</option>
+            <option value="created_at_lower_limit">Created At Lower Limit</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div id="event-filters">
       <div class="filters-row">

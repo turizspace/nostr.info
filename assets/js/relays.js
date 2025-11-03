@@ -14,8 +14,24 @@ let relays = [];
 let discoveredRelays = new Map();
 
 window.addEventListener('load', () => {
-  relays = {{ site.data.relays.wss | jsonify }}.map(it=>{ return {
-    url: `wss://${it}`,
+  // Support both the legacy `site.data.relays.wss` (array of host strings)
+  // and the future structured `site.data.relays` (array of objects).
+  const rawRelaysData = {{ site.data.relays | jsonify }};
+  let relayEntries = [];
+  if (Array.isArray(rawRelaysData)) {
+    relayEntries = rawRelaysData;
+  } else if (rawRelaysData && rawRelaysData.wss) {
+    relayEntries = rawRelaysData.wss;
+  } else {
+    relayEntries = [];
+  }
+
+  relays = relayEntries.map(it=>{
+    // allow strings (hostnames) and objects
+    const src = (typeof it === 'string') ? { host: it } : it || {};
+    const url = src.url || (src.host ? `wss://${src.host}` : (src.wss ? `wss://${src.wss}` : ''));
+    return Object.assign({
+      url,
     tried: -1,
     connected: false,
     answered: false,
@@ -30,16 +46,18 @@ window.addEventListener('load', () => {
     connectedAt: null,
     firstEventAt: null,
     nip11: null,
-    isDiscovered: false
-  }});
+      isDiscovered: false,
+      // preserve any static metadata from `_data` if present
+      _static: src
+    })});
   relays.forEach(relay => discoveredRelays.set(relay.url, relay));
   shuffle(relays);
   relays.forEach((r, id) => { setupWs(r, id) });
   window.tab = document.getElementById("tab");
   window.relayFilters = document.getElementById("relay-filters");
-  window.relayQualityFilter = document.getElementById("relay-filter");
-  window.activityFilter = document.getElementById("activity-filter");
-  window.uptimeFilter = document.getElementById("uptime-filter");
+  // legacy filters (relay-filter, activity-filter, uptime-filter) removed
+  window.nip11Nips = document.getElementById("nip11-nips");
+  window.relaySort = document.getElementById("relay-sort");
   window.connectRelaysBtn = document.getElementById("connectNewRelays");
   window.eventFilters = document.getElementById("event-filters");
   window.kindFilter = document.getElementById("kind-filter");
@@ -192,41 +210,74 @@ function connectRelays() {
 function relaysTable() {
   connectRelaysBtn.hidden = relays.filter(it=>it.tried<0).length === 0;
   
-  const filteredRelays = relays.filter(r=>{
-    // Performance filter
-    let passesPerformance = false
-    switch (relayQualityFilter.value) {
-      case 'all': passesPerformance = true; break
-      case 'didConnect': passesPerformance = r.answered; break
-      case 'sent': passesPerformance = r.events > 0; break
-      case 'sentMany': passesPerformance = r.events >= LIMIT; break
-      case 'sentConnected': passesPerformance = r.events >= LIMIT && r.connected; break
-      default: passesPerformance = false
+  // Start with all relays; legacy performance/activity/uptime filters removed
+  let filteredRelays = relays.slice();
+  
+  // (text search removed per request)
+
+  // Supported NIPs filter
+  const selectedNip = (nip11Nips && nip11Nips.value) ? nip11Nips.value : 'all';
+  if (selectedNip && selectedNip !== 'all') {
+    filteredRelays = filteredRelays.filter(r => {
+      const nips = (r.nip11 && r.nip11.supported_nips) || (r._static && r._static.supported_nips) || [];
+      return Array.isArray(nips) && nips.indexOf(parseInt(selectedNip)) !== -1;
+    });
+  }
+
+  // Sorting
+  const sortBy = (relaySort && relaySort.value) ? relaySort.value : 'default';
+  if (sortBy && sortBy !== 'default') {
+    // helper to read limitation values from nip11 or static metadata
+    function getLimitationValue(relay, key) {
+      const lim = (relay.nip11 && relay.nip11.limitation) || (relay._static && relay._static.limitation) || {};
+      if (!lim) return null;
+      const v = lim[key];
+      return (v === undefined) ? null : v;
     }
-    
-    // Activity filter
-    let passesActivity = true
-    if (activityFilter && activityFilter.value !== 'all') {
-      switch (activityFilter.value) {
-        case 'high': passesActivity = r.events >= 100; break
-        case 'medium': passesActivity = r.events >= 10 && r.events < 100; break
-        case 'low': passesActivity = r.events >= 1 && r.events < 10; break
-        case 'none': passesActivity = r.events === 0; break
+
+    filteredRelays.sort((a,b) => {
+      switch(sortBy) {
+        case 'latency': return ( (a.latencies.length>0 ? (a.latencies.reduce((s,v)=>s+v,0)/a.latencies.length) : Infinity) - (b.latencies.length>0 ? (b.latencies.reduce((s,v)=>s+v,0)/b.latencies.length) : Infinity) );
+        case 'activeUsers': return (b.activeUsers.size || 0) - (a.activeUsers.size || 0);
+        case 'payment_required': {
+          const av = getLimitationValue(a, 'payment_required');
+          const bv = getLimitationValue(b, 'payment_required');
+          const an = av === true ? 1 : (av === false ? 0 : -1);
+          const bn = bv === true ? 1 : (bv === false ? 0 : -1);
+          return bn - an; // true first
+        }
+        case 'auth_required': {
+          const av = getLimitationValue(a, 'auth_required');
+          const bv = getLimitationValue(b, 'auth_required');
+          const an = av === true ? 1 : (av === false ? 0 : -1);
+          const bn = bv === true ? 1 : (bv === false ? 0 : -1);
+          return bn - an; // true first
+        }
+        case 'max_limit': {
+          const av = getLimitationValue(a, 'max_limit');
+          const bv = getLimitationValue(b, 'max_limit');
+          const an = (av === null) ? -Infinity : Number(av);
+          const bn = (bv === null) ? -Infinity : Number(bv);
+          return bn - an; // larger max first
+        }
+        case 'max_subscriptions': {
+          const av = getLimitationValue(a, 'max_subscriptions');
+          const bv = getLimitationValue(b, 'max_subscriptions');
+          const an = (av === null) ? -Infinity : Number(av);
+          const bn = (bv === null) ? -Infinity : Number(bv);
+          return bn - an;
+        }
+        case 'created_at_lower_limit': {
+          const av = getLimitationValue(a, 'created_at_lower_limit');
+          const bv = getLimitationValue(b, 'created_at_lower_limit');
+          const an = (av === null) ? -Infinity : Number(av);
+          const bn = (bv === null) ? -Infinity : Number(bv);
+          return bn - an;
+        }
+        default: return 0;
       }
-    }
-    
-    // Uptime filter
-    let passesUptime = true
-    if (uptimeFilter && uptimeFilter.value !== 'all') {
-      switch (uptimeFilter.value) {
-        case 'connected': passesUptime = r.connected; break
-        case 'disconnected': passesUptime = !r.connected && r.answered; break
-        case 'never': passesUptime = !r.answered; break
-      }
-    }
-    
-    return passesPerformance && passesActivity && passesUptime
-  });
+    });
+  }
   
   const cardsHtml = filteredRelays.map((r, idx)=>{
     // Find the original index in the relays array
@@ -696,7 +747,10 @@ function testNip11(relay) {
     }
   }).then(it => {
     it.json().then(it => {
-      relay.nip11 = it
+  relay.nip11 = it
+  // Update global NIP-11 options (supported NIPs) when we get new info
+  try { updateNip11Options(); } catch(e) {}
+  try { setDirty(); } catch(e) {}
       // Optionally, set a flag for UI if needed
     }).catch(err => {
       relay.nip11 = null
@@ -1056,4 +1110,26 @@ function closeRelayModal(event) {
   if (modal && (!event || event.target === modal)) {
     modal.remove()
   }
+}
+
+// Populate the Supported NIPs select from available NIP-11 data and `_static` entries.
+function updateNip11Options() {
+  if (!nip11Nips) return;
+  const seen = new Set();
+  relays.forEach(r => {
+    const nips = (r._static && r._static.supported_nips) || (r.nip11 && r.nip11.supported_nips) || [];
+    if (Array.isArray(nips)) nips.forEach(n => seen.add(String(n)));
+  });
+  // Remove existing non-default options
+  for (let i = nip11Nips.options.length - 1; i >= 0; i--) {
+    if (nip11Nips.options[i].value === 'all') continue;
+    nip11Nips.remove(i);
+  }
+  const sorted = Array.from(seen).map(Number).filter(n=>!Number.isNaN(n)).sort((a,b)=>a-b);
+  sorted.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = String(n);
+    opt.text = `NIP-${n}`;
+    nip11Nips.appendChild(opt);
+  });
 }
