@@ -317,5 +317,27 @@
   
   .relay-card-row {
     gap: 1.5rem;
+    /* allow the right-side column to wrap beneath the label column on very small screens */
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  /* Add breathing room on the right side so values don't touch the card edge */
+  .relay-value-col {
+    padding-right: 0.75rem;
+    box-sizing: border-box;
+    text-align: right;
+  }
+
+  .relay-label-col {
+    padding-right: 0.5rem;
+  }
+
+  /* Ensure the numeric/value column doesn't overflow but can wrap if needed */
+  .relay-value {
+    word-break: keep-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }

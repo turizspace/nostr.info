@@ -786,6 +786,37 @@
   }
 }
 
+/* Very small screens: ensure relay card right-side content has breathing room and can wrap */
+@media (max-width: 576px) {
+  .relay-card-row {
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .relay-value-col {
+    padding-right: 0.75rem;
+    box-sizing: border-box;
+    text-align: right;
+  }
+
+  .relay-label-col {
+    padding-right: 0.5rem;
+  }
+
+  .relay-value {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .relay-url {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 @media (max-width: 900px) {
   .distribution-container {
     display: flex;

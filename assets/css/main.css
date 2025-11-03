@@ -1,6 +1,14 @@
 /* make layout sizing reliable across elements */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Set IBM Plex Mono as the site font (loaded via Google Fonts in head) */
+html, body {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* Override minima theme wrapper to use consistent 1200px max-width */
 .wrapper {
   max-width: 1200px !important;
