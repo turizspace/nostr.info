@@ -47,9 +47,14 @@
   }
 
   function applyToStatistics(q){
+    let handled = false;
     if(window.applyStatisticsSearch){
-      try{ window.applyStatisticsSearch(q); return true; } catch(e){}
+      try{ window.applyStatisticsSearch(q); handled = true; } catch(e){}
     }
+    if(window.applyEventsSearch){
+      try{ window.applyEventsSearch(q); handled = true; } catch(e){}
+    }
+    if(handled) return true;
     // Generic fallback: hide elements with .searchable (if present)
     const items = document.querySelectorAll('.searchable');
     if(items && items.length){

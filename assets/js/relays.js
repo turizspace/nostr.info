@@ -53,16 +53,25 @@ window.addEventListener('load', () => {
   relays.forEach(relay => discoveredRelays.set(relay.url, relay));
   shuffle(relays);
   relays.forEach((r, id) => { setupWs(r, id) });
-  window.tab = document.getElementById("tab");
+  window.tab = document.getElementById("tab") || { value: "relays" };
   window.relayFilters = document.getElementById("relay-filters");
   // legacy filters (relay-filter, activity-filter, uptime-filter) removed
   window.nip11Nips = document.getElementById("nip11-nips");
   window.relaySort = document.getElementById("relay-sort");
   window.connectRelaysBtn = document.getElementById("connectNewRelays");
-  window.eventFilters = document.getElementById("event-filters");
-  window.kindFilter = document.getElementById("kind-filter");
-  window.pubkeyFilter = document.getElementById("pubkey-filter");
-  window.degreeFilter = document.getElementById("degree-filter");
+  window.eventFilters = document.getElementById("event-filters") || { hidden: true };
+  window.kindFilter = document.getElementById("kind-filter") || { value: "all" };
+  window.pubkeyFilter = document.getElementById("pubkey-filter") || {
+    value: "",
+    setAttribute: function(){},
+    removeAttribute: function(){},
+    focus: function(){},
+  };
+  window.degreeFilter = document.getElementById("degree-filter") || {
+    value: "0",
+    setAttribute: function(){},
+    removeAttribute: function(){},
+  };
   window.output = document.getElementById("output");
   window.expandedEvent = "";
   window.addEventListener('scroll', handleScrollStart, true);
@@ -172,23 +181,9 @@ function update() {
   const tableScrollLeft = tableWrapper ? tableWrapper.scrollLeft : 0
   const hasScrolled = tableScrollLeft > 0
 
-  eventFilters.hidden = true
-  relayFilters.hidden = true
-  switch(tab.value) {
-    case "relays":
-      relayFilters.hidden = false
-      output.innerHTML = relaysTable()
-      break
-    case "events":
-      if (pubkeyFilter.value) {
-        degreeFilter.removeAttribute('disabled')
-      } else {
-        degreeFilter.setAttribute('disabled', '')
-      }
-      eventFilters.hidden = false
-      output.innerHTML = eventsTable()
-      break
-  }
+  if (window.eventFilters) window.eventFilters.hidden = true
+  if (relayFilters) relayFilters.hidden = false
+  if (output) output.innerHTML = relaysTable()
   
   // Only restore scroll if user had scrolled before
   if (hasScrolled || scrollLeft > 0 || scrollTop > 0) {

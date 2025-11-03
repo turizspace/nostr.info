@@ -12,11 +12,6 @@ permalink: /relays/
 <div class="relays-container">
 
   <div class="controls-container">
-    <select name="tab" id="tab" class="tab-select" onchange="setDirty()">
-      <option value="relays">📡 Show Relays</option>
-      <option value="events">📝 Show Events</option>
-    </select>
-
     <div id="relay-filters">
       <button id="connectNewRelays" class="connect-button" onclick="connectRelays()">
         {% fa_svg fas.fa-arrows-rotate %} Connect New Relays
@@ -41,58 +36,6 @@ permalink: /relays/
             <option value="max_limit">Max Limit</option>
             <option value="max_subscriptions">Max Subscriptions</option>
             <option value="created_at_lower_limit">Created At Lower Limit</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div id="event-filters">
-      <div class="filters-row">
-        <div class="filter-item">
-          <label for="kind-filter">{% fa_svg fas.fa-shapes %} Event Type</label>
-          <select name="kind-filter" id="kind-filter" class="filter-select" onchange="setDirty()">
-            <option value="all">{% fa_svg fas.fa-list %} All Types</option>
-            <option value="unknown">{% fa_svg fas.fa-circle-question %} Unhandled</option>
-            <option value="0">{% fa_svg fas.fa-user %} Metadata</option>
-            <option value="1">{% fa_svg fas.fa-comment %} Public Post</option>
-            <option value="2">{% fa_svg fas.fa-tower-broadcast %} Relay Rec</option>
-            <option value="3">{% fa_svg fas.fa-users %} Follows</option>
-            <option value="4">{% fa_svg fas.fa-envelope %} DM</option>
-            <option value="5">{% fa_svg fas.fa-trash %} Deletions</option>
-            <option value="6">{% fa_svg fas.fa-retweet %} Boost</option>
-            <option value="7">{% fa_svg fas.fa-heart %} Reactions</option>
-            <option value="30">{% fa_svg fas.fa-chess %} Chess</option>
-            <option value="40">{% fa_svg fas.fa-bullhorn %} Channel Create</option>
-            <option value="41">{% fa_svg fas.fa-pen %} Channel Update</option>
-            <option value="42">{% fa_svg fas.fa-comments %} Channel Msg</option>
-            <option value="43">{% fa_svg fas.fa-eye-slash %} Hide</option>
-            <option value="44">{% fa_svg fas.fa-volume-xmark %} Mute</option>
-            <option value="60">{% fa_svg fas.fa-car %} Ride Share</option>
-          </select>
-        </div>
-
-        <div class="filter-item filter-item-wide">
-          <label for="pubkey-filter">{% fa_svg fas.fa-key %} Public Key</label>
-          <input type="text" 
-                 name="pubkey-filter" 
-                 id="pubkey-filter" 
-                 class="filter-input" 
-                 placeholder="Enter public key (hex or npub)..." 
-                 onchange="setDirty()">
-        </div>
-
-        <div class="filter-item">
-          <label for="degree-filter">{% fa_svg fas.fa-diagram-project %} Depth</label>
-          <select name="degree-filter" 
-                  id="degree-filter" 
-                  class="filter-select" 
-                  disabled 
-                  onchange="setDirty()">
-            <option value="0">{% fa_svg fas.fa-bullseye %} Direct</option>
-            <option value="1">{% fa_svg fas.fa-user-group %} 1st Degree</option>
-            <option value="2">{% fa_svg fas.fa-share-nodes %} 2nd Degree</option>
-            <option value="3">{% fa_svg fas.fa-sitemap %} 3rd Degree</option>
-            <option value="4">{% fa_svg fas.fa-network-wired %} 4th Degree</option>
-            <option value="5">{% fa_svg fas.fa-globe %} 5th Degree</option>
           </select>
         </div>
       </div>

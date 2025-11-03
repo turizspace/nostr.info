@@ -17,6 +17,14 @@ function normalizeRelayUrl(url) {
     url = 'wss://' + url;
   }
   
+  try {
+    const parsed = new URL(url);
+    parsed.hash = '';
+    return parsed.href.replace(/\/$/, '').toLowerCase();
+  } catch (err) {
+    url = url.replace(/\s+/g, '');
+  }
+  
   // Remove trailing slash
   url = url.replace(/\/$/, '');
   
@@ -180,8 +188,177 @@ let eventKindsChart = null;
 let eventKindsBarChart = null;
 let clientCounts = {};
 
+const metadataByPubkey = new Map();
+const eventsByKind = new Map([[ 'all', [] ]]);
+const MAX_EVENTS_TRACKED = 400;
+const MAX_EVENTS_PER_KIND = 120;
+const eventListeners = new Set();
+let connectionSnapshot = {
+  total: 0,
+  connected: 0,
+  successRate: 0,
+  curated: { total: 0, connected: 0 },
+  discovered: { total: 0, connected: 0 },
+  updatedAt: null
+};
+const seenFeedEventIds = new Set();
+const feedEventIdQueue = [];
+const MAX_FEED_TRACKED_IDS = 600;
+
+window.nostrStats = window.nostrStats || {};
+
+Object.assign(window.nostrStats, {
+  getEventsForKind(kind = 'all') {
+    const key = kind === 'all' ? 'all' : String(kind);
+    const bucket = eventsByKind.get(key);
+    return bucket ? bucket.slice() : [];
+  },
+  getMetadataForPubkey(pubkey) {
+    if (!pubkey) return null;
+    return metadataByPubkey.get(pubkey) || null;
+  },
+  getAvailableEventKinds() {
+    return Array.from(eventsByKind.keys())
+      .filter(key => key !== 'all')
+      .map(Number)
+      .sort((a, b) => a - b);
+  },
+  getKindLabel(kind) {
+    return getKindInfo(Number(kind)).label;
+  },
+  getConnectionSnapshot() {
+    return {
+      total: connectionSnapshot.total,
+      connected: connectionSnapshot.connected,
+      successRate: connectionSnapshot.successRate,
+      updatedAt: connectionSnapshot.updatedAt,
+      curated: {
+        total: connectionSnapshot.curated.total,
+        connected: connectionSnapshot.curated.connected
+      },
+      discovered: {
+        total: connectionSnapshot.discovered.total,
+        connected: connectionSnapshot.discovered.connected
+      }
+    };
+  },
+  subscribeEvents(listener) {
+    if (typeof listener !== 'function') return () => {};
+    eventListeners.add(listener);
+    return () => eventListeners.delete(listener);
+  }
+});
+
+function notifyEventsUpdated(reason = 'events') {
+  const payload = { reason, updatedAt: Date.now() };
+  eventListeners.forEach(listener => {
+    try {
+      listener(payload);
+    } catch (err) {
+      console.error('nostrStats listener failed', err);
+    }
+  });
+  document.dispatchEvent(new CustomEvent('nostrStats:eventsUpdated', { detail: payload }));
+}
+
+function recordEventForFeeds(event) {
+  if (!event || typeof event.kind === 'undefined') return;
+  if (!event.id) return;
+
+  if (seenFeedEventIds.has(event.id)) {
+    return;
+  }
+  seenFeedEventIds.add(event.id);
+  feedEventIdQueue.push(event.id);
+  if (feedEventIdQueue.length > MAX_FEED_TRACKED_IDS) {
+    const oldestId = feedEventIdQueue.shift();
+    if (oldestId) {
+      seenFeedEventIds.delete(oldestId);
+    }
+  }
+  const kindKey = String(event.kind);
+
+  if (!eventsByKind.has(kindKey)) {
+    eventsByKind.set(kindKey, []);
+  }
+  const bucket = eventsByKind.get(kindKey);
+  bucket.unshift(event);
+  if (bucket.length > MAX_EVENTS_PER_KIND) {
+    bucket.length = MAX_EVENTS_PER_KIND;
+  }
+
+  let allBucket = eventsByKind.get('all');
+  if (!allBucket) {
+    allBucket = [];
+    eventsByKind.set('all', allBucket);
+  }
+  allBucket.unshift(event);
+  if (allBucket.length > MAX_EVENTS_TRACKED) {
+    allBucket.length = MAX_EVENTS_TRACKED;
+  }
+}
+
+function recordMetadataEvent(event) {
+  if (!event || !event.pubkey || !event.content) return;
+  try {
+    const parsed = typeof event.content === 'string' ? JSON.parse(event.content) : {};
+    const profile = {
+      pubkey: event.pubkey,
+      name: parsed.name || '',
+      displayName: parsed.display_name || parsed.displayName || parsed.name || '',
+      about: parsed.about || '',
+      picture: parsed.picture || parsed.image || '',
+      nip05: parsed.nip05 || '',
+      lud16: parsed.lud16 || parsed.lud06 || '',
+      updatedAt: (event.created_at || 0) * 1000,
+      raw: event
+    };
+    metadataByPubkey.set(event.pubkey, profile);
+    notifyEventsUpdated('metadata');
+  } catch (err) {
+    // metadata can be invalid JSON; ignore silently
+  }
+}
+
+function setupStatisticsTabs() {
+  const tabs = Array.from(document.querySelectorAll('.stats-tab'));
+  const panels = Array.from(document.querySelectorAll('.tab-panel'));
+  if (!tabs.length || !panels.length) {
+    return;
+  }
+
+  tabs.forEach(tab => {
+    const isActive = tab.classList.contains('active');
+    tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    tab.setAttribute('tabindex', isActive ? '0' : '-1');
+  });
+
+  panels.forEach(panel => {
+    const isActive = panel.classList.contains('active');
+    panel.toggleAttribute('hidden', !isActive);
+  });
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      tabs.forEach(btn => {
+        const isCurrent = btn === tab;
+        btn.classList.toggle('active', isCurrent);
+        btn.setAttribute('aria-selected', isCurrent ? 'true' : 'false');
+        btn.setAttribute('tabindex', isCurrent ? '0' : '-1');
+      });
+      panels.forEach(panel => {
+        const isCurrent = panel.dataset.tabPanel === target;
+        panel.classList.toggle('active', isCurrent);
+        panel.toggleAttribute('hidden', !isCurrent);
+      });
+    });
+  });
+}
+
 // Initialize on page load
 window.addEventListener('load', () => {
+  setupStatisticsTabs();
   initializeStatistics();
   setupCharts();
   connectToRelays();
@@ -285,6 +462,12 @@ function setupWebSocketWithPool(relay, index) {
       if (data[0] === 'EVENT') {
         const subscriptionId = data[1];
         const event = data[2];
+        if (event.kind === 0) {
+          recordMetadataEvent(event);
+          if (subscriptionId === 'stats-meta') {
+            return;
+          }
+        }
         if (reqSentAt[subscriptionId.replace('stats-', '')]) {
           const latency = Date.now() - reqSentAt[subscriptionId.replace('stats-', '')];
           relay.latencies.push(latency);
@@ -298,6 +481,9 @@ function setupWebSocketWithPool(relay, index) {
         if (subscriptionId === 'stats-main' && event.kind !== 0 && event.kind !== 3) {
           relay.events++;
           relay.eventsList.push(event);
+          if (relay.eventsList.length > MAX_EVENTS_PER_KIND) {
+            relay.eventsList.shift();
+          }
           if (!relay.eventsByKind[event.kind]) {
             relay.eventsByKind[event.kind] = 0;
           }
@@ -319,6 +505,8 @@ function setupWebSocketWithPool(relay, index) {
             if (client) {
               clientCounts[client] = (clientCounts[client] || 0) + 1;
             }
+            recordEventForFeeds(event);
+            notifyEventsUpdated();
           }
         }
       } else if (data[0] === 'EOSE') {
@@ -386,6 +574,12 @@ function setupWebSocket(relay, index) {
       if (data[0] === 'EVENT') {
         const subscriptionId = data[1];
         const event = data[2];
+        if (event.kind === 0) {
+          recordMetadataEvent(event);
+          if (subscriptionId === 'stats-meta') {
+            return;
+          }
+        }
         
         // Calculate latency
         if (reqSentAt[subscriptionId.replace('stats-', '')]) {
@@ -405,6 +599,9 @@ function setupWebSocket(relay, index) {
         if (subscriptionId === 'stats-main' && event.kind !== 0 && event.kind !== 3) {
           relay.events++;
           relay.eventsList.push(event);
+          if (relay.eventsList.length > MAX_EVENTS_PER_KIND) {
+            relay.eventsList.shift();
+          }
           
           // Track event kind
           if (!relay.eventsByKind[event.kind]) {
@@ -429,6 +626,8 @@ function setupWebSocket(relay, index) {
             event.receivedAt = Date.now();
             event.relayUrl = relay.url;
             allEvents.push(event);
+            recordEventForFeeds(event);
+            notifyEventsUpdated();
           }
         }
       } else if (data[0] === 'EOSE') {
@@ -515,7 +714,8 @@ function processRelayListEvent(event) {
   // Extract relay URLs from tags
   const relayUrls = event.tags
     .filter(tag => tag[0] === 'r' && tag[1])
-    .map(tag => normalizeRelayUrl(tag[1]))
+    .flatMap(tag => splitRelayTagValue(tag[1]))
+    .map(url => normalizeRelayUrl(url))
     .filter(url => {
       if (!url) return false;
       try {
@@ -527,6 +727,23 @@ function processRelayListEvent(event) {
     });
   
   relayUrls.forEach(url => addDiscoveredRelay(url));
+}
+
+function splitRelayTagValue(rawValue) {
+  if (!rawValue || typeof rawValue !== 'string') return [];
+  let working = rawValue.trim();
+  if (!working) return [];
+
+  try {
+    working = decodeURIComponent(working);
+  } catch (_) {
+    // ignore decode failures, keep original string
+  }
+
+  working = working.replace(/[\s,;|]+/g, ' ').trim();
+  if (!working) return [];
+
+  return working.split(' ').filter(Boolean);
 }
 
 function addDiscoveredRelay(url) {
@@ -592,32 +809,23 @@ function updateRelayReliability(relay) {
 }
 
 function updateConnectionStatus() {
+  const snapshot = buildConnectionSnapshot();
+  connectionSnapshot = snapshot;
+
   const statusEl = document.getElementById('connection-status');
-  if (!statusEl) return;
-  
-  const connected = relays.filter(r => r.connected).length;
-  const total = relays.length;
-  const percentage = ((connected / total) * 100).toFixed(1);
-  
-  // Discovered relays: Additional relays found from user profiles (NIP-65)
-  const discoveredRelays = relays.filter(r => r.isDiscovered);
-  const discoveredConnected = discoveredRelays.filter(r => r.connected).length;
-  const discoveredTotal = discoveredRelays.length;
-  
-  // Curated relays: Relays from our curated list (not discovered)
-  const curatedRelays = relays.filter(r => !r.isDiscovered);
-  const curatedConnected = curatedRelays.filter(r => r.connected).length;
-  const curatedTotal = curatedRelays.length;
-  
-  // Verify math: total should equal curated + discovered
-  const calculatedTotal = curatedTotal + discoveredTotal;
-  const breakdown = `${curatedTotal} curated + ${discoveredTotal} discovered = ${calculatedTotal}`;
-  
+  if (!statusEl) {
+    notifyEventsUpdated('connection');
+    return;
+  }
+
+  const percentage = snapshot.total ? snapshot.successRate.toFixed(1) : '0.0';
+  const breakdown = `${snapshot.curated.total} curated + ${snapshot.discovered.total} discovered = ${snapshot.curated.total + snapshot.discovered.total}`;
+
   statusEl.innerHTML = `
     <div class="status-grid">
       <div class="status-item" title="Currently active WebSocket connections out of all unique relays we know about. ${breakdown}">
         <span class="status-label">${ICON_CONNECTED} Connected Relays:</span>
-        <span class="status-value">${connected} / ${total}</span>
+        <span class="status-value">${snapshot.connected} / ${snapshot.total}</span>
       </div>
       <div class="status-item" title="Percentage of all relays we successfully connected to">
         <span class="status-label">${ICON_SUCCESS} Success Rate:</span>
@@ -625,20 +833,39 @@ function updateConnectionStatus() {
       </div>
       <div class="status-item" title="Our curated list of known, reliable relays">
         <span class="status-label">${ICON_CURATED} Curated:</span>
-        <span class="status-value">${curatedConnected} / ${curatedTotal}</span>
+        <span class="status-value">${snapshot.curated.connected} / ${snapshot.curated.total}</span>
       </div>
       <div class="status-item" title="Relays discovered from user profiles (NIP-65 relay lists) - we actively find and connect to these">
         <span class="status-label">${ICON_DISCOVERED} Discovered:</span>
-        <span class="status-value">${discoveredConnected} / ${discoveredTotal}</span>
+        <span class="status-value">${snapshot.discovered.connected} / ${snapshot.discovered.total}</span>
       </div>
       <div class="status-breakdown" style="grid-column: 1 / -1; text-align: center; font-size: 0.875rem; color: #6c757d; padding: 0.5rem;">
-        Total = ${curatedTotal} curated + ${discoveredTotal} discovered
+        Total = ${snapshot.curated.total} curated + ${snapshot.discovered.total} discovered
       </div>
       <div class="status-progress">
         <div class="progress-bar" style="width: ${percentage}%"></div>
       </div>
     </div>
   `;
+  notifyEventsUpdated('connection');
+}
+
+function buildConnectionSnapshot() {
+  const total = relays.length;
+  const connected = relays.filter(r => r.connected).length;
+  const discoveredRelays = relays.filter(r => r.isDiscovered);
+  const discoveredConnected = discoveredRelays.filter(r => r.connected).length;
+  const curatedRelays = relays.filter(r => !r.isDiscovered);
+  const curatedConnected = curatedRelays.filter(r => r.connected).length;
+
+  return {
+    total,
+    connected,
+    successRate: total ? (connected / total) * 100 : 0,
+    curated: { total: curatedRelays.length, connected: curatedConnected },
+    discovered: { total: discoveredRelays.length, connected: discoveredConnected },
+    updatedAt: Date.now()
+  };
 }
 
 function startPeriodicUpdates() {
@@ -769,6 +996,8 @@ function updateTopRelays() {
     const avgLatency = relay.latencies.length > 0
       ? (relay.latencies.reduce((sum, l) => sum + l, 0) / relay.latencies.length).toFixed(0)
       : '-';
+    const eventsPerMinute = calculateEventsPerMinute(relay);
+    const topKind = getTopKindForRelay(relay);
 
     const status = relay.connected
       ? `<span class="status-badge online">{% fa_svg fas.fa-circle-check %}</span>`
@@ -785,16 +1014,52 @@ function updateTopRelays() {
             <div class="relay-label">Events</div>
             <div class="relay-label">Active Users</div>
             <div class="relay-label">Avg Latency</div>
+            <div class="relay-label">Events / min</div>
+            <div class="relay-label">Top Kind</div>
           </div>
           <div class="relay-value-col">
             <div class="relay-value">${relay.events}</div>
             <div class="relay-value">${relay.activeUsers.size}</div>
             <div class="relay-value">${avgLatency}ms</div>
+            <div class="relay-value">${eventsPerMinute > 0 ? eventsPerMinute.toFixed(1) : '-'}</div>
+            <div class="relay-value">${topKind ? `<span class="relay-kind-label">${topKind.label}</span><small class="relay-kind-count">${topKind.count}</small>` : '-'}</div>
           </div>
         </div>
       </div>
     `;
   }).join('');
+}
+
+function calculateEventsPerMinute(relay) {
+  if (!relay || !Array.isArray(relay.eventsList) || relay.eventsList.length === 0) {
+    return 0;
+  }
+  const timestamps = relay.eventsList
+    .map(e => Number(e.created_at) || 0)
+    .filter(Boolean)
+    .sort((a, b) => a - b);
+  if (timestamps.length < 2) {
+    return timestamps.length; // assume per minute roughly count value
+  }
+  const minTime = timestamps[0];
+  const maxTime = timestamps[timestamps.length - 1];
+  const spanSeconds = Math.max(60, maxTime - minTime);
+  return relay.eventsList.length / (spanSeconds / 60);
+}
+
+function getTopKindForRelay(relay) {
+  if (!relay || !relay.eventsByKind) return null;
+  let topKindId = null;
+  let topCount = 0;
+  Object.entries(relay.eventsByKind).forEach(([kind, count]) => {
+    if (count > topCount) {
+      topCount = count;
+      topKindId = Number(kind);
+    }
+  });
+  if (topKindId === null) return null;
+  const info = getKindInfo(topKindId);
+  return { id: topKindId, count: topCount, label: info.label };
 }
 
 function updateKindsTable() {

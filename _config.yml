@@ -43,6 +43,7 @@ header_pages:
   - _pages/about.md
   - _pages/resources.md
   - _pages/relays.md
+  - _pages/events.md
   - _pages/relayr.html
 
 collections:
