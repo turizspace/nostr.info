@@ -157,6 +157,7 @@ const EVENT_KIND_INFO = {
 // Chart instances
 let eventKindsChart = null;
 let eventKindsBarChart = null;
+let clientCounts = {};
 
 // Initialize on page load
 window.addEventListener('load', () => {
@@ -292,6 +293,11 @@ function setupWebSocketWithPool(relay, index) {
             event.receivedAt = Date.now();
             event.relayUrl = relay.url;
             allEvents.push(event);
+            // Extract client information when available and count
+            const client = extractClientFromEvent(event);
+            if (client) {
+              clientCounts[client] = (clientCounts[client] || 0) + 1;
+            }
           }
         }
       } else if (data[0] === 'EOSE') {
@@ -877,7 +883,7 @@ function initializeCharts() {
     });
   }
 
-  // Event kinds bar chart
+  // Clients bar chart (shows client software usage extracted from events)
   const kindsBarCanvas = document.getElementById('event-kinds-bar-chart');
   if (kindsBarCanvas) {
     eventKindsBarChart = new Chart(kindsBarCanvas, {
@@ -885,7 +891,7 @@ function initializeCharts() {
       data: {
         labels: [],
         datasets: [{
-          label: 'Event Count',
+          label: 'Client Count',
           data: [],
           backgroundColor: [
             'rgba(255, 99, 132, 0.8)',
@@ -945,6 +951,46 @@ function updateCharts() {
   updateKindsBarChart();
 }
 
+// Attempt to extract client info from an event
+function extractClientFromEvent(event) {
+  if (!event) return null;
+
+  // 1) Look for explicit client tag: ['client', 'NAME']
+  if (Array.isArray(event.tags)) {
+    for (const t of event.tags) {
+      if (Array.isArray(t) && t.length >= 2) {
+        const key = String(t[0]).toLowerCase();
+        if (key === 'client' && t[1]) {
+          return String(t[1]).trim();
+        }
+      }
+    }
+  }
+
+  // 2) Try to parse JSON content for common client fields
+  if (event.content && typeof event.content === 'string') {
+    try {
+      const parsed = JSON.parse(event.content);
+      const candidates = ['client', 'client_name', 'user_agent', 'app', 'software'];
+      for (const c of candidates) {
+        if (parsed && parsed[c]) {
+          return String(parsed[c]).trim();
+        }
+      }
+    } catch (e) {
+      // content is not JSON; try simple heuristics
+      const content = event.content.toLowerCase();
+      // look for common client tokens
+      const tokens = ['iris', 'damus', 'noot', 'nos', 'nostr', 'nsec', 'pleb', 'nostr-react', 'nostr.java', 'nnostr', 'nostrkit', 'nostr-js'];
+      for (const tkn of tokens) {
+        if (content.includes(tkn)) return tkn;
+      }
+    }
+  }
+
+  return null;
+}
+
 function updateKindsChart() {
   if (!eventKindsChart) return;
   
@@ -965,14 +1011,15 @@ function updateKindsChart() {
 function updateKindsBarChart() {
   if (!eventKindsBarChart) return;
 
-  const sortedKinds = Object.entries(eventKindCounts)
+  // Build client usage list from collected clientCounts
+  const sortedClients = Object.entries(clientCounts)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 20); // Top 20 for bar chart
+    .slice(0, 20); // Top 20 clients
 
-  if (sortedKinds.length === 0) return;
+  if (sortedClients.length === 0) return;
 
-  const labels = sortedKinds.map(([kind, _]) => getKindInfo(parseInt(kind)).label);
-  const data = sortedKinds.map(([_, count]) => count);
+  const labels = sortedClients.map(([client, _]) => client);
+  const data = sortedClients.map(([_, count]) => count);
 
   eventKindsBarChart.data.labels = labels;
   eventKindsBarChart.data.datasets[0].data = data;
@@ -1008,6 +1055,7 @@ function refreshStatistics() {
   allEvents = [];
   eventTimeline = [];
   eventKindCounts = {};
+  clientCounts = {};
   activeUsersPubkeys = new Set();
   statsStartTime = Date.now();
   
