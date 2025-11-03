@@ -1014,15 +1014,11 @@ function updateTopRelays() {
             <div class="relay-label">Events</div>
             <div class="relay-label">Active Users</div>
             <div class="relay-label">Avg Latency</div>
-            <div class="relay-label">Events / min</div>
-            <div class="relay-label">Top Kind</div>
           </div>
           <div class="relay-value-col">
             <div class="relay-value">${relay.events}</div>
             <div class="relay-value">${relay.activeUsers.size}</div>
             <div class="relay-value">${avgLatency}ms</div>
-            <div class="relay-value">${eventsPerMinute > 0 ? eventsPerMinute.toFixed(1) : '-'}</div>
-            <div class="relay-value">${topKind ? `<span class="relay-kind-label">${topKind.label}</span><small class="relay-kind-count">${topKind.count}</small>` : '-'}</div>
           </div>
         </div>
       </div>
