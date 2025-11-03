@@ -1,7 +1,7 @@
 ---
 permalink: /about/
 layout: home
-title: About
+title: Blogs
 ---
 
 <link rel="stylesheet" href="/assets/css/main.css">
