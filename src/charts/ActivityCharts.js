@@ -20,20 +20,81 @@ const formatNumber = (num) => num.toLocaleString();
 const formatDate = (timestamp) => new Date(timestamp * 1000).toLocaleDateString();
 const formatSats = (sats) => `${formatNumber(sats)} sats`;
 
+// Helper function to calculate activity data from raw events (for consistency with legacy stats)
+const calculateActivityFromEvents = (events, timeRange) => {
+  if (!events || events.length === 0) return [];
+  
+  const now = Math.floor(Date.now() / 1000);
+  const startTime = now - (timeRange === '7d' ? 7 * 86400 : timeRange === '30d' ? 30 * 86400 : 86400);
+  
+  const dayMap = new Map();
+  
+  events.forEach(event => {
+    if (event.created_at < startTime) return;
+    
+    const dayTimestamp = Math.floor(event.created_at / 86400) * 86400;
+    
+    if (!dayMap.has(dayTimestamp)) {
+      dayMap.set(dayTimestamp, {
+        timestamp: dayTimestamp,
+        events: 0,
+        trusted: 0,
+        untrusted: 0,
+        zaps: 0,
+        kinds: {}
+      });
+    }
+    
+    const day = dayMap.get(dayTimestamp);
+    day.events++;
+    
+    // Count zaps (kind 9735)
+    if (event.kind === 9735) {
+      day.zaps++;
+    }
+    
+    // Track event kinds
+    day.kinds[event.kind] = (day.kinds[event.kind] || 0) + 1;
+    
+    // For trusted/untrusted, we'll just count all as trusted since we don't have WoT data here
+    day.trusted++;
+  });
+  
+  return Array.from(dayMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+};
+
 // Activity Charts Component
 export const ActivityCharts = ({ analytics, timeRange }) => {
   const [activityData, setActivityData] = useState([]);
   const [hiddenLines, setHiddenLines] = useState({});
+  const [useLegacyData, setUseLegacyData] = useState(false);
   
   useEffect(() => {
-    // Initial load
-    const data = analytics.getActivityData(timeRange);
+    // Check if we should use legacy stats for consistency
+    const shouldUseLegacy = window.nostrStats && typeof window.nostrStats.getAllEvents === 'function';
+    setUseLegacyData(shouldUseLegacy);
+    
+    // Initial load - use legacy events if available
+    let data;
+    if (shouldUseLegacy) {
+      const legacyEvents = window.nostrStats.getAllEvents();
+      // Calculate activity data from legacy events
+      data = calculateActivityFromEvents(legacyEvents, timeRange);
+    } else {
+      data = analytics.getActivityData(timeRange);
+    }
     setActivityData(data);
     
     // Listen for analytics updates
     const handleUpdate = (type, data) => {
       if (type === 'event' || type === 'eventBatch') {
-        const updatedData = analytics.getActivityData(timeRange);
+        let updatedData;
+        if (shouldUseLegacy) {
+          const legacyEvents = window.nostrStats.getAllEvents();
+          updatedData = calculateActivityFromEvents(legacyEvents, timeRange);
+        } else {
+          updatedData = analytics.getActivityData(timeRange);
+        }
         setActivityData(updatedData);
       }
     };

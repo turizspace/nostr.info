@@ -188,6 +188,18 @@ let eventKindsChart = null;
 let eventKindsBarChart = null;
 let clientCounts = {};
 
+// Function to recalculate client counts from all events (used after changing extraction logic)
+function recalculateClientCounts() {
+  clientCounts = {};
+  allEvents.forEach(event => {
+    const client = extractClientFromEvent(event);
+    if (client) {
+      clientCounts[client] = (clientCounts[client] || 0) + 1;
+    }
+  });
+  console.log(`Recalculated client counts: ${Object.keys(clientCounts).length} unique clients found`);
+}
+
 const metadataByPubkey = new Map();
 const eventsByKind = new Map([[ 'all', [] ]]);
 const MAX_EVENTS_TRACKED = 400;
@@ -246,6 +258,60 @@ Object.assign(window.nostrStats, {
     if (typeof listener !== 'function') return () => {};
     eventListeners.add(listener);
     return () => eventListeners.delete(listener);
+  },
+  getLegacyStats() {
+    const cutoffTime = Date.now() - timeRangeMs;
+    const totalRelays = relays.length;
+    const connectedRelays = relays.filter(r => r.connected).length;
+    const activeRelays = relays.filter(r => r.connected && r.events > 0).length;
+    const recentEvents = allEvents.filter(e => e.created_at * 1000 >= cutoffTime);
+    const totalEvents = recentEvents.length;
+    
+    const relaysWithLatency = relays.filter(r => r.latencies.length > 0);
+    let avgResponseMs = null;
+    if (relaysWithLatency.length > 0) {
+      const allLatencies = relaysWithLatency.flatMap(r => r.latencies);
+      avgResponseMs = Math.round(allLatencies.reduce((sum, l) => sum + l, 0) / allLatencies.length);
+    }
+    
+    // Get total unique clients from the legacy extraction method
+    const totalClients = Object.keys(clientCounts).length;
+    
+    return {
+      totalRelays,
+      connectedRelays,
+      activeRelays,
+      totalEvents,
+      avgResponseMs,
+      timeRangeMs,
+      totalClients,
+      allEvents: allEvents.slice() // Return all events for consistent data source
+    };
+  },
+  getAllEvents() {
+    return allEvents.slice();
+  },
+  getRelays() {
+    return relays.map(r => ({
+      url: r.url,
+      connected: r.connected,
+      events: r.events,
+      isDiscovered: r.isDiscovered,
+      latencies: r.latencies.slice()
+    }));
+  },
+  getClientCounts() {
+    // Return a copy of the clientCounts object
+    return Object.assign({}, clientCounts);
+  },
+  getTotalClients() {
+    // Return the total number of unique clients detected
+    return Object.keys(clientCounts).length;
+  },
+  recalculateClientCounts() {
+    // Expose the recalculation function so it can be called externally
+    recalculateClientCounts();
+    return Object.keys(clientCounts).length;
   }
 });
 
@@ -412,7 +478,14 @@ let activeRelayCount = 0;
 function connectToRelays() {
   const statusEl = document.getElementById('connection-status');
   if (statusEl) {
-    statusEl.innerHTML = `<div class="status-message">Connecting to ${relays.length} relays...</div>`;
+    const textEl = statusEl.querySelector('.events-progress-text');
+    const indicator = statusEl.querySelector('.events-progress-indicator');
+    if (textEl) {
+      textEl.textContent = `Connecting to ${relays.length} relays…`;
+    }
+    if (indicator) {
+      indicator.classList.remove('is-ready');
+    }
   }
   relayQueue = relays.map((r, i) => ({ relay: r, index: i }));
   activeRelayCount = 0;
@@ -815,35 +888,36 @@ function updateConnectionStatus() {
     return;
   }
 
-  const percentage = snapshot.total ? snapshot.successRate.toFixed(1) : '0.0';
-  const breakdown = `${snapshot.curated.total} curated + ${snapshot.discovered.total} discovered = ${snapshot.curated.total + snapshot.discovered.total}`;
+  const indicator = statusEl.querySelector('.events-progress-indicator');
+  const textEl = statusEl.querySelector('.events-progress-text');
+  if (!indicator || !textEl) {
+    notifyEventsUpdated('connection');
+    return;
+  }
 
-  statusEl.innerHTML = `
-    <div class="status-grid">
-      <div class="status-item" title="Currently active WebSocket connections out of all unique relays we know about. ${breakdown}">
-        <span class="status-label">${ICON_CONNECTED} Connected Relays:</span>
-        <span class="status-value">${snapshot.connected} / ${snapshot.total}</span>
-      </div>
-      <div class="status-item" title="Percentage of all relays we successfully connected to">
-        <span class="status-label">${ICON_SUCCESS} Success Rate:</span>
-        <span class="status-value">${percentage}%</span>
-      </div>
-      <div class="status-item" title="Our curated list of known, reliable relays">
-        <span class="status-label">${ICON_CURATED} Curated:</span>
-        <span class="status-value">${snapshot.curated.connected} / ${snapshot.curated.total}</span>
-      </div>
-      <div class="status-item" title="Relays discovered from user profiles (NIP-65 relay lists) - we actively find and connect to these">
-        <span class="status-label">${ICON_DISCOVERED} Discovered:</span>
-        <span class="status-value">${snapshot.discovered.connected} / ${snapshot.discovered.total}</span>
-      </div>
-      <div class="status-breakdown" style="grid-column: 1 / -1; text-align: center; font-size: 0.875rem; color: #6c757d; padding: 0.5rem;">
-        Total = ${snapshot.curated.total} curated + ${snapshot.discovered.total} discovered
-      </div>
-      <div class="status-progress">
-        <div class="progress-bar" style="width: ${percentage}%"></div>
-      </div>
-    </div>
-  `;
+  if (!snapshot || !snapshot.total) {
+    textEl.textContent = 'Connecting to relays…';
+    indicator.classList.remove('is-ready');
+    notifyEventsUpdated('connection');
+    return;
+  }
+
+  const success = snapshot.successRate ? Math.round(snapshot.successRate) : 0;
+  const curatedPart = snapshot.curated && snapshot.curated.total
+    ? ` · ${snapshot.curated.connected}/${snapshot.curated.total} curated`
+    : '';
+  const discoveredPart = snapshot.discovered && snapshot.discovered.total
+    ? ` · ${snapshot.discovered.connected}/${snapshot.discovered.total} discovered`
+    : '';
+
+  textEl.textContent = `${snapshot.connected}/${snapshot.total} relays online (${success}% success)${curatedPart}${discoveredPart}`;
+
+  if (snapshot.connected > 0) {
+    indicator.classList.add('is-ready');
+  } else {
+    indicator.classList.remove('is-ready');
+  }
+
   notifyEventsUpdated('connection');
 }
 
@@ -876,10 +950,19 @@ function startPeriodicUpdates() {
     updateCharts();
   }, CHART_UPDATE_INTERVAL);
   
+  // Recalculate client counts periodically to catch any changes in extraction logic
+  setInterval(() => {
+    recalculateClientCounts();
+  }, 30000); // Every 30 seconds
+  
   // Initial update
   setTimeout(() => {
     updateStatistics();
     updateCharts();
+    // Also recalculate client counts after initial events are loaded
+    setTimeout(() => {
+      recalculateClientCounts();
+    }, 5000); // Wait 5 seconds for events to load first
   }, 2000);
 }
 
@@ -1216,7 +1299,7 @@ function initializeCharts() {
           y: {
             title: {
               display: true,
-              text: 'Event Kind'
+              text: 'Client'
             }
           }
         }
@@ -1234,7 +1317,7 @@ function updateCharts() {
 function extractClientFromEvent(event) {
   if (!event) return null;
 
-  // 1) Look for explicit client tag: ['client', 'NAME']
+  // 1) Look for explicit client tag: ['client', 'NAME'] - This is the primary method
   if (Array.isArray(event.tags)) {
     for (const t of event.tags) {
       if (Array.isArray(t) && t.length >= 2) {
@@ -1246,28 +1329,9 @@ function extractClientFromEvent(event) {
     }
   }
 
-  // 2) Try to parse JSON content for common client fields
-  if (event.content && typeof event.content === 'string') {
-    try {
-      const parsed = JSON.parse(event.content);
-      const candidates = ['client', 'client_name', 'user_agent', 'app', 'software'];
-      for (const c of candidates) {
-        if (parsed && parsed[c]) {
-          return String(parsed[c]).trim();
-        }
-      }
-    } catch (e) {
-      // content is not JSON; try simple heuristics
-      const content = event.content.toLowerCase();
-      // look for common client tokens
-      const tokens = ['iris', 'damus', 'noot', 'nos', 'nostr', 'nsec', 'pleb', 'nostr-react', 'nostr.java', 'nnostr', 'nostrkit', 'nostr-js'];
-      for (const tkn of tokens) {
-        if (content.includes(tkn)) return tkn;
-      }
-    }
-  }
-
-  return null;
+  // 2) If no client tag found, return 'Unknown' to maintain consistency with ClientStats
+  // (Previously we had complex fallback logic, but the simple approach works better)
+  return 'Unknown';
 }
 
 function updateKindsChart() {
@@ -1290,8 +1354,9 @@ function updateKindsChart() {
 function updateKindsBarChart() {
   if (!eventKindsBarChart) return;
 
-  // Build client usage list from collected clientCounts
+  // Build client usage list from collected clientCounts, excluding "Unknown"
   const sortedClients = Object.entries(clientCounts)
+    .filter(([client, _]) => client !== 'Unknown') // Exclude Unknown clients
     .sort((a, b) => b[1] - a[1])
     .slice(0, 20); // Top 20 clients
 

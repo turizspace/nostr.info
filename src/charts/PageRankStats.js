@@ -9,9 +9,15 @@ const formatPubkey = (pubkey, length = 8) => {
 export const PageRankStats = ({ analytics }) => {
   const [pagerankData, setPagerankData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [useLegacyData, setUseLegacyData] = useState(false);
   
   useEffect(() => {
-    // Initial load
+    // Check if we should use legacy stats for consistency
+    const shouldUseLegacy = window.nostrStats && typeof window.nostrStats.getAllEvents === 'function';
+    setUseLegacyData(shouldUseLegacy);
+    
+    // Initial load - PageRank calculation is the same regardless, 
+    // but using legacy events ensures consistency with other stats
     const data = analytics.getPageRankData(100);
     setPagerankData(data);
     setLoading(false);

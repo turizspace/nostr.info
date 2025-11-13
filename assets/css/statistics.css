@@ -221,96 +221,6 @@
   padding: 2rem 1rem;
 }
 
-.stats-connection-block {
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 2rem;
-  box-shadow: none;
-}
-
-.stats-connection-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.stats-connection-title {
-  margin: 0;
-  font-size: 1.35rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #0b1226;
-  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
-}
-
-.stats-connection-title svg {
-  width: 1.2em;
-  height: 1.2em;
-}
-
-.stats-connection-sub {
-  margin: 0;
-  color: #475569;
-  font-size: 0.95rem;
-  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
-}
-
-.stats-connection-block .connection-status {
-  margin-top: 0.65rem;
-  padding: 0.85rem 1rem;
-  background: #ffffff;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  box-shadow: none;
-}
-
-.connection-info {
-  margin-top: 0.6rem;
-  background: rgba(15, 23, 42, 0.04);
-  border-radius: 10px;
-  padding: 0.55rem 0.85rem;
-  color: #1f2937;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
-}
-
-.connection-info[open] {
-  background: rgba(15, 23, 42, 0.06);
-}
-
-.connection-info summary {
-  cursor: pointer;
-  font-weight: 600;
-  list-style: none;
-  outline: none;
-  font-family: inherit;
-}
-
-.connection-info summary::-webkit-details-marker { display: none; }
-
-.connection-info summary::before {
-  content: '\25B6';
-  font-size: 0.75rem;
-  margin-right: 0.5rem;
-  transition: transform 0.2s ease;
-  display: inline-block;
-}
-
-.connection-info[open] summary::before {
-  transform: rotate(90deg);
-}
-
-.connection-info ul {
-  margin: 0.6rem 0 0 0;
-  padding-left: 1.25rem;
-  color: #334155;
-  font-family: inherit;
-}
-
 .stats-tabs {
   display: flex;
   gap: 0.75rem;
@@ -1081,6 +991,15 @@
   }
   50% {
     opacity: 0.5;
+  }
+}
+
+@keyframes events-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 

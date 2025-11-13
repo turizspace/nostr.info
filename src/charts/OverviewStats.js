@@ -5,12 +5,20 @@ const formatSats = (sats) => `${formatNumber(sats)} sats`;
 
 export const OverviewStats = ({ analytics }) => {
   const [summaryStats, setSummaryStats] = useState({});
+  const [legacyStats, setLegacyStats] = useState({});
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
     // Initial calculation
     const stats = analytics.getSummaryStats();
     setSummaryStats(stats);
+    
+    // Get legacy stats from statistics.js for consistency
+    if (window.nostrStats && typeof window.nostrStats.getLegacyStats === 'function') {
+      const legacy = window.nostrStats.getLegacyStats();
+      setLegacyStats(legacy);
+    }
+    
     setLoading(false);
     
     // Listen for analytics updates and recalculate stats
@@ -18,6 +26,12 @@ export const OverviewStats = ({ analytics }) => {
       if (type === 'event' || type === 'eventBatch') {
         const updatedStats = analytics.getSummaryStats();
         setSummaryStats(updatedStats);
+        
+        // Also update legacy stats
+        if (window.nostrStats && typeof window.nostrStats.getLegacyStats === 'function') {
+          const legacy = window.nostrStats.getLegacyStats();
+          setLegacyStats(legacy);
+        }
       }
     };
     
@@ -27,6 +41,12 @@ export const OverviewStats = ({ analytics }) => {
     const interval = setInterval(() => {
       const updatedStats = analytics.getSummaryStats();
       setSummaryStats(updatedStats);
+      
+      // Also update legacy stats
+      if (window.nostrStats && typeof window.nostrStats.getLegacyStats === 'function') {
+        const legacy = window.nostrStats.getLegacyStats();
+        setLegacyStats(legacy);
+      }
     }, 2000);
     
     return () => {
@@ -39,20 +59,32 @@ export const OverviewStats = ({ analytics }) => {
     return null;
   }
   
+  // Use legacy stats for relays, events, and clients to ensure consistency with Legacy Overview section
+  const totalEvents = legacyStats.totalEvents || summaryStats.totalEvents || 0;
+  const totalRelays = legacyStats.totalRelays || 0;
+  const connectedRelays = legacyStats.connectedRelays || 0;
+  const avgResponseMs = legacyStats.avgResponseMs || null;
+  const totalClients = legacyStats.totalClients || summaryStats.totalClients || 0;
+  
   const stats = [
     {
-      label: 'Total Clients',
-      value: formatNumber(summaryStats.totalClients || 0),
+      label: 'Total Relays',
+      value: `${connectedRelays}/${totalRelays}`,
       highlight: false,
     },
     {
       label: 'Total Events',
-      value: formatNumber(summaryStats.totalEvents || 0),
+      value: formatNumber(totalEvents),
       highlight: false,
     },
     {
-      label: 'Days Tracked',
-      value: formatNumber(summaryStats.daysTracked || 0),
+      label: 'Avg Response',
+      value: avgResponseMs ? `${avgResponseMs}ms` : 'N/A',
+      highlight: false,
+    },
+    {
+      label: 'Total Clients',
+      value: formatNumber(totalClients),
       highlight: false,
     },
     {
@@ -66,13 +98,8 @@ export const OverviewStats = ({ analytics }) => {
       highlight: false,
     },
     {
-      label: 'Top Client',
-      value: summaryStats.topClient || 'N/A',
-      highlight: false,
-    },
-    {
-      label: 'Avg Events/Day',
-      value: formatNumber(summaryStats.avgEventsPerDay || 0),
+      label: 'Days Tracked',
+      value: formatNumber(summaryStats.daysTracked || 0),
       highlight: false,
     },
   ];

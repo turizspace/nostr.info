@@ -1,12 +1,11 @@
 ---
 layout: page
-title: Statistics
 permalink: /
 ---
-
 <link rel="stylesheet" href="/assets/css/main.css">
 <link rel="stylesheet" href="/assets/css/statistics.css">
 <link rel="stylesheet" href="/assets/css/analytics.css">
+<link rel="stylesheet" href="/assets/css/events.css">
 <script src="/js/analytics.js"></script>
 <script src="/js/components/time-filter.js"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -17,32 +16,13 @@ permalink: /
 
 <div class="statistics-container">
 
-  <div class="stats-connection-block">
-    <div class="stats-connection-header">
-      <h2 class="stats-connection-title">{% fa_svg fas.fa-plug %} Live Connection Status</h2>
-      <p class="stats-connection-sub">Real-time view of the relay pool powering these metrics.</p>
-    </div>
-    <div class="connection-status" id="connection-status">
-      <div class="status-message">
-        <span class="loading">Connecting to relays...</span>
-      </div>
-    </div>
-    <details class="connection-info" name="connection-details">
-      <summary>What these buckets represent</summary>
-      <ul>
-        <li><strong>Curated Relays:</strong> Our manually maintained list of known, reliable relays collected and verified over time.</li>
-        <li><strong>Discovered Relays:</strong> Additional relays we find dynamically by reading user profiles (NIP-65 relay lists) to surface active infrastructure.</li>
-        <li><strong>Total:</strong> All unique relays combined (curated + discovered); we continuously attempt new connections to keep coverage fresh.</li>
-      </ul>
-    </details>
+  <div class="events-progress-banner" id="connection-status" role="status" aria-live="polite">
+    <span class="events-progress-indicator"></span>
+    <span class="events-progress-text">Connecting to relays…</span>
   </div>
 
-    <!-- Analytics Dashboard Section -->
+  <!-- Analytics Dashboard Section -->
   <div class="analytics-dashboard-container">
-    <div class="analytics-dashboard-header">
-      <h2 class="analytics-dashboard-title">{% fa_svg fas.fa-chart-area %}   </h2>
-      <p class="analytics-dashboard-sub">Comprehensive real-time analytics and insights for the Nostr network</p>
-    </div>
 
     <!-- Time Range Filter - DISABLED: Not yet implemented for real-time sorting -->
     <!-- <div id="analytics-time-filter"></div> -->

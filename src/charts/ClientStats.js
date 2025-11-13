@@ -3,18 +3,63 @@ import React, { useState, useEffect } from 'react';
 const formatNumber = (num) => num.toLocaleString();
 const formatDate = (timestamp) => new Date(timestamp * 1000).toLocaleDateString();
 
+// Helper to calculate client stats from raw events
+const calculateClientStatsFromEvents = (events, limit = 20) => {
+  const clientMap = new Map();
+  
+  events.forEach(event => {
+    const clientTag = event.tags?.find(tag => tag[0] === 'client');
+    const clientName = clientTag ? clientTag[1] : 'Unknown';
+    
+    if (!clientMap.has(clientName)) {
+      clientMap.set(clientName, {
+        name: clientName,
+        count: 0,
+        lastSeen: 0,
+        kinds: {}
+      });
+    }
+    
+    const client = clientMap.get(clientName);
+    client.count++;
+    client.lastSeen = Math.max(client.lastSeen, event.created_at);
+    client.kinds[event.kind] = (client.kinds[event.kind] || 0) + 1;
+  });
+  
+  return Array.from(clientMap.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+};
+
 export const ClientStats = ({ analytics }) => {
   const [clientData, setClientData] = useState([]);
+  const [useLegacyData, setUseLegacyData] = useState(false);
   
   useEffect(() => {
+    // Check if we should use legacy stats for consistency
+    const shouldUseLegacy = window.nostrStats && typeof window.nostrStats.getAllEvents === 'function';
+    setUseLegacyData(shouldUseLegacy);
+    
     // Initial load
-    const data = analytics.getClientStats(20);
+    let data;
+    if (shouldUseLegacy) {
+      const legacyEvents = window.nostrStats.getAllEvents();
+      data = calculateClientStatsFromEvents(legacyEvents, 20);
+    } else {
+      data = analytics.getClientStats(20);
+    }
     setClientData(data);
     
     // Listen for analytics updates
     const handleUpdate = (type, data) => {
       if (type === 'event' || type === 'eventBatch') {
-        const updatedData = analytics.getClientStats(20);
+        let updatedData;
+        if (shouldUseLegacy) {
+          const legacyEvents = window.nostrStats.getAllEvents();
+          updatedData = calculateClientStatsFromEvents(legacyEvents, 20);
+        } else {
+          updatedData = analytics.getClientStats(20);
+        }
         setClientData(updatedData);
       }
     };
@@ -23,7 +68,13 @@ export const ClientStats = ({ analytics }) => {
     
     // Fallback: also check every 2 seconds for updates
     const interval = setInterval(() => {
-      const updatedData = analytics.getClientStats(20);
+      let updatedData;
+      if (shouldUseLegacy) {
+        const legacyEvents = window.nostrStats.getAllEvents();
+        updatedData = calculateClientStatsFromEvents(legacyEvents, 20);
+      } else {
+        updatedData = analytics.getClientStats(20);
+      }
       setClientData(updatedData);
     }, 2000);
     
