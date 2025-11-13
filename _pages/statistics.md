@@ -207,9 +207,27 @@ permalink: /
       </div>
     </section>
     <section class="stats-section tab-panel" id="tab-top-relays" data-tab-panel="top-relays" role="tabpanel" aria-labelledby="tab-button-top-relays" hidden>
-      <div class="top-relays-grid" id="top-relays-grid">
-        <!-- Cards will be rendered here by statistics.js -->
-        <div class="loading" style="text-align:center;padding:2rem">Loading relay data...</div>
+      <div class="top-relays-container">
+        <table class="top-relays-table" id="top-relays-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Relay URL</th>
+              <th>Status</th>
+              <th>Events</th>
+              <th>Active Users</th>
+              <th>Avg Latency</th>
+              <th>Top Kinds</th>
+            </tr>
+          </thead>
+          <tbody id="top-relays-tbody">
+            <tr>
+              <td colspan="7" style="text-align:center;padding:2rem">
+                <span class="loading">Loading relay data...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
   </div>

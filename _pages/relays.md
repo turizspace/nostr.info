@@ -1,5 +1,6 @@
 ---
 layout: page
+title: Relays
 permalink: /relays/
 ---
 

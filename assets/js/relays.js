@@ -12,6 +12,8 @@ function shuffle(array) {
 
 let relays = [];
 let discoveredRelays = new Map();
+let tableSortColumn = 'status'; // Default sort by status (connected first)
+let tableSortAscending = false; // Descending by default (connected first)
 
 window.addEventListener('load', () => {
   // Support both the legacy `site.data.relays.wss` (array of host strings)
@@ -215,6 +217,16 @@ function connectRelays() {
   })
 }
 
+function sortRelaysTableBy(column) {
+  if (tableSortColumn === column) {
+    tableSortAscending = !tableSortAscending;
+  } else {
+    tableSortColumn = column;
+    tableSortAscending = column === 'url'; // URL ascending by default, others descending
+  }
+  setDirty();
+}
+
 function relaysTable() {
   connectRelaysBtn.hidden = relays.filter(it=>it.tried<0).length === 0;
   
@@ -242,7 +254,7 @@ function relaysTable() {
     });
   }
 
-  // Sorting
+  // Sorting (keep old sort dropdown logic)
   const sortBy = (relaySort && relaySort.value) ? relaySort.value : 'default';
   if (sortBy && sortBy !== 'default') {
     // helper to read limitation values from nip11 or static metadata
@@ -296,8 +308,42 @@ function relaysTable() {
       }
     });
   }
+
+  // Table column sorting
+  filteredRelays.sort((a, b) => {
+    let comparison = 0;
+    
+    switch(tableSortColumn) {
+      case 'url':
+        comparison = a.url.localeCompare(b.url);
+        break;
+      case 'status':
+        const aStatus = a.tried < 0 ? 2 : (a.connected ? 0 : 1);
+        const bStatus = b.tried < 0 ? 2 : (b.connected ? 0 : 1);
+        comparison = aStatus - bStatus;
+        break;
+      case 'events':
+        comparison = (a.events || 0) - (b.events || 0);
+        break;
+      case 'users':
+        comparison = (a.activeUsers.size || 0) - (b.activeUsers.size || 0);
+        break;
+      case 'latency':
+        const aLatency = a.latencies.length > 0 ? (a.latencies.reduce((s,v)=>s+v,0)/a.latencies.length) : Infinity;
+        const bLatency = b.latencies.length > 0 ? (b.latencies.reduce((s,v)=>s+v,0)/b.latencies.length) : Infinity;
+        comparison = aLatency - bLatency;
+        break;
+      case 'connected':
+        const aTime = a.connectedAt || 0;
+        const bTime = b.connectedAt || 0;
+        comparison = aTime - bTime;
+        break;
+    }
+    
+    return tableSortAscending ? comparison : -comparison;
+  });
   
-  const cardsHtml = filteredRelays.map((r, idx)=>{
+  const tableRows = filteredRelays.map((r, idx)=>{
     // Find the original index in the relays array
     const originalIdx = relays.findIndex(relay => relay.url === r.url)
     
@@ -310,7 +356,7 @@ function relaysTable() {
           : `<span class="status-badge offline">{% fa_svg fas.fa-circle-xmark %}</span>`;
     
     const avgLatency = r.latencies.length > 0 
-      ? (r.latencies.reduce((sum, l) => sum + l, 0) / r.latencies.length).toFixed(0) + 'ms'
+      ? (r.latencies.reduce((sum, l) => sum + l, 0) / r.latencies.length).toFixed(0)
       : '-';
     
     const connectedTime = r.connectedAt 
@@ -319,33 +365,61 @@ function relaysTable() {
     
     const activeUsers = r.activeUsers.size;
     
+    // Get top 3 event kinds
+    let topKindsStr = '-';
+    if (r.eventsByKind && Object.keys(r.eventsByKind).length > 0) {
+      const sortedKinds = Object.entries(r.eventsByKind)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([kind]) => kind);
+      
+      if (sortedKinds.length > 0) {
+        topKindsStr = sortedKinds.join(', ');
+        const remainingKinds = Object.keys(r.eventsByKind).length - 3;
+        if (remainingKinds > 0) {
+          topKindsStr += ` <small class="text-muted">+${remainingKinds}</small>`;
+        }
+      }
+    }
+    
     return `
-      <div class="relay-card modern-justify" onclick="showRelayDetails(${originalIdx})" style="cursor:pointer">
-        <div class="relay-card-row">
-          <div class="relay-url"><code>${r.url}</code></div>
-          <div class="relay-status">${statusIcon}</div>
-        </div>
-        <div class="relay-card-row metrics-row">
-          <div class="relay-label-col">
-            <div class="relay-label">Events</div>
-            <div class="relay-label">Active Users</div>
-            <div class="relay-label">Avg Latency</div>
-            <div class="relay-label">Connected Time</div>
-          </div>
-          <div class="relay-value-col">
-            <div class="relay-value">${r.events > 0 ? `<strong>${r.events}</strong>` : '0'}</div>
-            <div class="relay-value">${activeUsers > 0 ? activeUsers : '-'}</div>
-            <div class="relay-value">${avgLatency}</div>
-            <div class="relay-value">${connectedTime}</div>
-          </div>
-        </div>
-      </div>
+      <tr onclick="showRelayDetails(${originalIdx})" style="cursor:pointer">
+        <td class="text-center">${idx + 1}</td>
+        <td><code>${r.url}</code></td>
+        <td class="text-center">${statusIcon}</td>
+        <td class="text-right">${r.events > 0 ? `<strong>${r.events}</strong>` : '0'}</td>
+        <td class="text-right">${activeUsers > 0 ? activeUsers : '-'}</td>
+        <td class="text-right">${avgLatency}${avgLatency !== '-' ? 'ms' : ''}</td>
+        <td class="text-center">${connectedTime}</td>
+        <td>${topKindsStr}</td>
+      </tr>
     `;
   }).join('');
   
+  const sortIndicator = (column) => {
+    if (tableSortColumn !== column) return '';
+    return tableSortAscending ? ' ▲' : ' ▼';
+  };
+  
   return `
-    <div class="relays-grid">
-      ${cardsHtml}
+    <div class="relays-table-container">
+      <table class="relays-table">
+        <thead>
+          <tr>
+            <th class="text-center">#</th>
+            <th class="sortable" onclick="sortRelaysTableBy('url')">Relay URL${sortIndicator('url')}</th>
+            <th class="text-center sortable" onclick="sortRelaysTableBy('status')">Status${sortIndicator('status')}</th>
+            <th class="text-right sortable" onclick="sortRelaysTableBy('events')">Events${sortIndicator('events')}</th>
+            <th class="text-right sortable" onclick="sortRelaysTableBy('users')">Active Users${sortIndicator('users')}</th>
+            <th class="text-right sortable" onclick="sortRelaysTableBy('latency')">Avg Latency${sortIndicator('latency')}</th>
+            <th class="text-center sortable" onclick="sortRelaysTableBy('connected')">Connected Time${sortIndicator('connected')}</th>
+            <th>Top Kinds</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
     </div>
     <div class="relay-info-notes">
       <p><sup>1</sup> Events count shows the number of events received after requesting ${LIMIT} most recent events. Events for metadata and follows are not included in this count.</p>

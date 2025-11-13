@@ -1062,46 +1062,55 @@ function updateTopRelays() {
   const topRelays = [...relays]
     .filter(r => r.events > 0)
     .sort((a, b) => b.events - a.events)
-    .slice(0, 10);
+    .slice(0, 20); // Show top 20 relays
 
-  const grid = document.getElementById('top-relays-grid');
-  if (!grid) return;
+  const tbody = document.getElementById('top-relays-tbody');
+  if (!tbody) return;
 
   if (topRelays.length === 0) {
-    grid.innerHTML = '<div class="loading" style="text-align:center;padding:2rem">No relay activity yet. Waiting for events...</div>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem"><span class="loading">No relay activity yet. Waiting for events...</span></td></tr>';
     return;
   }
 
-  grid.innerHTML = topRelays.map((relay) => {
+  tbody.innerHTML = topRelays.map((relay, index) => {
     const avgLatency = relay.latencies.length > 0
       ? (relay.latencies.reduce((sum, l) => sum + l, 0) / relay.latencies.length).toFixed(0)
       : '-';
-    const eventsPerMinute = calculateEventsPerMinute(relay);
-    const topKind = getTopKindForRelay(relay);
-
+    
     const status = relay.connected
       ? `<span class="status-badge online">{% fa_svg fas.fa-circle-check %}</span>`
       : `<span class="status-badge offline">{% fa_svg fas.fa-circle-xmark %}</span>`;
 
+    // Get top 3 event kinds for this relay
+    let topKindsStr = 'N/A';
+    if (relay.eventsByKind && Object.keys(relay.eventsByKind).length > 0) {
+      const sortedKinds = Object.entries(relay.eventsByKind)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+      
+      if (sortedKinds.length > 0) {
+        topKindsStr = sortedKinds.map(([kind, count]) => {
+          const kindInfo = getKindInfo(Number(kind));
+          return `<span class="relay-kind-label" title="${kindInfo.label}: ${count} events">${kind}</span>`;
+        }).join(', ');
+        
+        const remainingKinds = Object.keys(relay.eventsByKind).length - 3;
+        if (remainingKinds > 0) {
+          topKindsStr += ` <span class="relay-kind-count">+${remainingKinds} more</span>`;
+        }
+      }
+    }
+
     return `
-      <div class="relay-card modern-justify">
-        <div class="relay-card-row">
-          <div class="relay-url"><code>${relay.url}</code></div>
-          <div class="relay-status">${status}</div>
-        </div>
-        <div class="relay-card-row metrics-row">
-          <div class="relay-label-col">
-            <div class="relay-label">Events</div>
-            <div class="relay-label">Active Users</div>
-            <div class="relay-label">Avg Latency</div>
-          </div>
-          <div class="relay-value-col">
-            <div class="relay-value">${relay.events}</div>
-            <div class="relay-value">${relay.activeUsers.size}</div>
-            <div class="relay-value">${avgLatency}ms</div>
-          </div>
-        </div>
-      </div>
+      <tr>
+        <td class="text-center">#${index + 1}</td>
+        <td><code>${relay.url}</code></td>
+        <td class="text-center">${status}</td>
+        <td class="text-right">${relay.events.toLocaleString()}</td>
+        <td class="text-right">${relay.activeUsers.size.toLocaleString()}</td>
+        <td class="text-right">${avgLatency}${avgLatency !== '-' ? 'ms' : ''}</td>
+        <td>${topKindsStr}</td>
+      </tr>
     `;
   }).join('');
 }

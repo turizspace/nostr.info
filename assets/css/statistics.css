@@ -775,6 +775,14 @@
   font-family: 'Monaco', 'Courier New', monospace;
 }
 
+.top-relays-table .text-center {
+  text-align: center;
+}
+
+.top-relays-table .text-right {
+  text-align: right;
+}
+
 .status-badge {
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
