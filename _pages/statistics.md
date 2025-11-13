@@ -6,6 +6,13 @@ permalink: /
 
 <link rel="stylesheet" href="/assets/css/main.css">
 <link rel="stylesheet" href="/assets/css/statistics.css">
+<link rel="stylesheet" href="/assets/css/analytics.css">
+<script src="/js/analytics.js"></script>
+<script src="/js/components/time-filter.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="/assets/dist/charts.js"></script>
+<script src="/js/analytics-init.js"></script>
 <script src="/js/statistics.js"></script>
 
 <div class="statistics-container">
@@ -30,10 +37,24 @@ permalink: /
     </details>
   </div>
 
-  <!-- Time Filter Controls -->
+    <!-- Analytics Dashboard Section -->
+  <div class="analytics-dashboard-container">
+    <div class="analytics-dashboard-header">
+      <h2 class="analytics-dashboard-title">{% fa_svg fas.fa-chart-area %}   </h2>
+      <p class="analytics-dashboard-sub">Comprehensive real-time analytics and insights for the Nostr network</p>
+    </div>
+
+    <!-- Time Range Filter - DISABLED: Not yet implemented for real-time sorting -->
+    <!-- <div id="analytics-time-filter"></div> -->
+
+    <!-- Analytics Dashboard -->
+    <div id="analytics-dashboard-root"></div>
+  </div>
+
+  <!-- Legacy Statistics Controls -->
   <div class="controls-container">
     <div class="filter-group">
-      <label for="time-range">Time Range:</label>
+      <label for="time-range">Legacy Time Range:</label>
       <select name="time-range" id="time-range" class="filter-select" onchange="updateTimeRange()">
         <option value="24h" selected>Last 24 Hours</option>
         <option value="7d">Last 7 Days</option>
@@ -45,8 +66,8 @@ permalink: /
   </div>
 
   <nav class="stats-tabs" aria-label="Statistics sections" role="tablist">
-    <button type="button" class="stats-tab active" id="tab-button-overview" role="tab" aria-selected="true" aria-controls="tab-overview" data-tab="overview">{% fa_svg fas.fa-chart-line %}<span>Overview</span></button>
-    <button type="button" class="stats-tab" id="tab-button-analysis" role="tab" aria-selected="false" aria-controls="tab-analysis" data-tab="analysis">{% fa_svg fas.fa-square-poll-vertical %}<span>Analytics</span></button>
+    <button type="button" class="stats-tab active" id="tab-button-overview" role="tab" aria-selected="true" aria-controls="tab-overview" data-tab="overview">{% fa_svg fas.fa-chart-line %}<span>Legacy Overview</span></button>
+    <button type="button" class="stats-tab" id="tab-button-analysis" role="tab" aria-selected="false" aria-controls="tab-analysis" data-tab="analysis">{% fa_svg fas.fa-square-poll-vertical %}<span>Legacy Analytics</span></button>
   <button type="button" class="stats-tab" id="tab-button-distribution" role="tab" aria-selected="false" aria-controls="tab-distribution" data-tab="distribution">{% fa_svg fas.fa-bullseye %}<span>Event Distribution</span></button>
   <button type="button" class="stats-tab" id="tab-button-top-relays" role="tab" aria-selected="false" aria-controls="tab-top-relays" data-tab="top-relays">{% fa_svg fas.fa-trophy %}<span>Top Relays</span></button>
   </nav>

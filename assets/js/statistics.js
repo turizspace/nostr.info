@@ -753,17 +753,14 @@ function addDiscoveredRelay(url) {
   
   // Check if we already have this relay
   if (discoveredRelays.has(url)) {
-    const existingRelay = discoveredRelays.get(url);
-    if (!existingRelay.isDiscovered) {
-      existingRelay.isDiscovered = true;
-    }
+    // Don't mark curated relays as discovered - they should keep their status
     return;
   }
   
-  // Add new discovered relay
+  // Add new discovered relay (ONLY if it's not already in our curated list)
   console.log(`Discovered new relay: ${url}`);
   const newRelay = createRelayObject(url);
-  newRelay.isDiscovered = true;
+  newRelay.isDiscovered = true;  // Mark as newly discovered
   
   discoveredRelays.set(url, newRelay);
   relays.push(newRelay);

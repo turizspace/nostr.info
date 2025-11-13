@@ -1,9 +1,10 @@
 /* Top Relays by Activity Card Grid */
 .top-relays-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
   margin-top: 2rem;
+  width: 100%;
 }
 
 .relay-card {
@@ -15,6 +16,9 @@
   flex-direction: column;
   transition: box-shadow 0.2s;
   border: 1px solid #e3e8f0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 .relay-card:hover {
   box-shadow: 0 4px 24px rgba(0,0,0,0.14);
@@ -33,6 +37,11 @@
 }
 .relay-status {
   font-size: 0.95rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 .status-badge {
   padding: 0.25em 0.75em;
@@ -73,26 +82,20 @@
 }
 .relay-url {
   font-family: 'Fira Mono', 'Menlo', 'Monaco', monospace;
-  font-size: 1.08rem;
+  font-size: 1.02rem;
   color: #222;
-  word-break: break-all;
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 220px;
-}
-@media (max-width: 600px) {
-  .relay-url {
-    max-width: 120px;
-  }
+  flex: 1 1 220px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .relay-metrics {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem 1.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 1.25rem;
   font-size: 1rem;
   color: #222;
+  width: 100%;
 }
 .relay-metrics div {
   background: #f6f8fa;
@@ -102,29 +105,81 @@
   box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
+@media (max-width: 900px) {
+  .top-relays-grid {
+    gap: 1.25rem;
+  }
+
+  .relay-card {
+    padding: 1.35rem 1.1rem;
+  }
+
+  .relay-card-row {
+    gap: 0.85rem 1.1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .relay-card-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .relay-status {
+    justify-content: flex-start;
+  }
+
+  .relay-value-col {
+    align-items: flex-start;
+  }
+
+  .relay-value {
+    text-align: left;
+  }
+
+  .relay-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-relays-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .relay-card {
+    padding: 1.2rem;
+  }
+
+  .relay-url {
+    font-size: 0.95rem;
+  }
+}
+
 /* Modern relay card justified layout fix */
 .relay-card-row {
   display: flex;
-  flex-direction: row;
+  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: stretch;
-  gap: 2.5rem;
+  align-items: flex-start;
+  gap: 1rem 1.5rem;
+  width: 100%;
 }
 .relay-label-col {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.7rem;
-  min-width: 120px;
-  flex: 0 0 140px;
+  min-width: 0;
+  flex: 1 1 140px;
 }
 .relay-value-col {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 0.7rem;
-  flex: 1 1 auto;
-  min-width: 120px;
+  flex: 1 1 160px;
+  min-width: 0;
 }
 .relay-label {
   font-size: 1rem;
@@ -139,6 +194,7 @@
   font-weight: 600;
   word-break: break-all;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .relay-kind-label {
@@ -966,34 +1022,26 @@
   }
 }
 
-/* Very small screens: ensure relay card right-side content has breathing room and can wrap */
+/* Very small screens: keep metrics legible without forcing horizontal scroll */
 @media (max-width: 576px) {
   .relay-card-row {
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    align-items: center;
+    gap: 0.85rem;
+    align-items: flex-start;
   }
 
-  .relay-value-col {
-    padding-right: 0.75rem;
-    box-sizing: border-box;
-    text-align: right;
-  }
-
+  .relay-value-col,
   .relay-label-col {
-    padding-right: 0.5rem;
+    padding-right: 0;
   }
 
   .relay-value {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
   }
 
   .relay-url {
-    max-width: 140px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: 100%;
   }
 }
 
