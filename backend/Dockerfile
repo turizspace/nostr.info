@@ -3,15 +3,19 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
+
+# Install dependencies (including devDependencies for build)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code
 COPY . .
 
 # Build TypeScript
 RUN npm run build
+
+# Remove devDependencies after build
+RUN npm prune --production
 
 # Production stage
 FROM node:18-alpine
