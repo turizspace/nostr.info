@@ -37,6 +37,11 @@ include:
 exclude:
   - _nostrResources/LICENSE
   - _nostrResources/Readme.md
+  - backend/
+  - node_modules/
+  - vendor/
+  - Gemfile
+  - Gemfile.lock
 
 header_pages:
   - _pages/resources.md
