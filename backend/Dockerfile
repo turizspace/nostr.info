@@ -40,4 +40,4 @@ USER nostr
 EXPOSE 3000
 
 # Default command (can be overridden in docker-compose)
-CMD ["npm", "start"]
+CMD ["node", "dist/api-server.js"]
