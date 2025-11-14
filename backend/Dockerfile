@@ -29,6 +29,7 @@ RUN apk add --no-cache curl
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/src/database/schema.sql ./dist/database/schema.sql
 
 # Create non-root user
 RUN addgroup -g 1001 -S nostr && \
