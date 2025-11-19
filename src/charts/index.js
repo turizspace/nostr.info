@@ -76,11 +76,6 @@ const AnalyticsDashboard = ({ analytics }) => {
       ),
     },
     {
-      id: 'activity',
-      label: 'Activity Charts',
-      content: <ActivityCharts analytics={analytics} timeRange={timeRange} />,
-    },
-    {
       id: 'clients',
       label: 'Client Stats',
       content: <ClientStats analytics={analytics} />,

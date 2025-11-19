@@ -61,17 +61,10 @@ export const OverviewStats = ({ analytics }) => {
   
   // Use legacy stats for relays, events, and clients to ensure consistency with Legacy Overview section
   const totalEvents = legacyStats.totalEvents || summaryStats.totalEvents || 0;
-  const totalRelays = legacyStats.totalRelays || 0;
-  const connectedRelays = legacyStats.connectedRelays || 0;
   const avgResponseMs = legacyStats.avgResponseMs || null;
   const totalClients = legacyStats.totalClients || summaryStats.totalClients || 0;
   
   const stats = [
-    {
-      label: 'Total Relays',
-      value: `${connectedRelays}/${totalRelays}`,
-      highlight: false,
-    },
     {
       label: 'Total Events',
       value: formatNumber(totalEvents),
